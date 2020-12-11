@@ -11,13 +11,17 @@
       "matches": [
         "<all_urls>"
       ],
-      "js": ["./scr/content.js"]
+      "js": [".src/scr/content.js"]
     }
   ],
   "browser_action": {
-    "default_icon": "./resources/icon_16.png"
+    "default_icon": "./ico/icon_16.png",
+    "default_title": "asyncnys",
+    "default_popup": ".src/html/popup.html"
   },
   "background": {
-    "scripts": ["./scr/background.js"]
-  }
+    "persistent": true,
+    "scripts": [".src/scr/background.js"]
+  },
+  "permissions": ["<all_urls>", "tabs", "storage", "notifications"]
 }
