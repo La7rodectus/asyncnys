@@ -1,6 +1,6 @@
 'use strict';
-/* eslint-disable max-len */
 /* eslint-disable no-undef */
+/* eslint-disable max-len */
 
 
 
@@ -20,4 +20,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 }
 );
+
 

@@ -1,8 +1,10 @@
 'use strict';
 /* eslint-disable max-len */
 /* eslint-disable no-undef */
-const debag = true;
+const debug = true;
 
+// imports
+//const WebSocket = require('ws');
 
 // library
 function logHref() {
@@ -43,11 +45,11 @@ function findInFramesSelector(selector, doc) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.message === 'clicked_browser_action') {
-    const res = findInFramesSelector('video', document);
-    if (res) {
-      res.pause();
+    const videoToSync = findInFramesSelector('video', document);
+    if (videoToSync) {
+      videoToSync.pause();
     }
-    console.log(res);
+    console.log(videoToSync);
     logHref();
   }
 
@@ -56,3 +58,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   //chrome.runtime.sendMessage({ 'message': 'open_new_tab', 'url': document.location.href });
 
 });
+
+
+//WebSocket
+const socket = new WebSocket('ws://127.0.0.1:8000/');
+
+socket.onopen = () => {
+  console.log('connected');
+};
+
+socket.onclose = () => {
+  console.log('closed');
+};
+
+socket.onmessage = event => {
+  console.log(event.data);
+};
+
+

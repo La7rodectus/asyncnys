@@ -1,0 +1,11 @@
+{
+  "name": "asyncnys",
+  "version": "0.0.1",
+  "author": "LTR",
+  "description": "Sync videos",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^7.4.0"
+  },
+  "readmeFilename": "README.md"
+}

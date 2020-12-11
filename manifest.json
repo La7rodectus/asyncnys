@@ -4,24 +4,23 @@
   "version": "0.0.1",
   "description": "Sync videos",
   "icons": {
-    "128": "./resources/icon_16.png"
+    "128": "./ico/icon_16.png"
   },
   "content_scripts": [
     {
       "matches": [
         "<all_urls>"
       ],
-      "js": [".src/scr/content.js"]
+      "js": ["./src/scr/content.js"]
     }
   ],
   "browser_action": {
     "default_icon": "./ico/icon_16.png",
-    "default_title": "asyncnys",
-    "default_popup": ".src/html/popup.html"
+    "default_title": "asyncnys"
   },
   "background": {
     "persistent": true,
-    "scripts": [".src/scr/background.js"]
+    "scripts": ["./src/scr/background.js"]
   },
   "permissions": ["<all_urls>", "tabs", "storage", "notifications"]
 }
