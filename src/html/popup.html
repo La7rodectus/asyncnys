@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>asyncnys</title>
+    <link rel="stylesheet" type="text/css" href="../css/popup.css" />
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <div id="main">
+      <div class="block" id="logo">
+        <img src="https://ru.stackoverflow.com/favicon.ico" width="16px" height="16px" />
+        asyncnys
+      </div>
+      <input class="block" id="name" type="text" autocomplete="off" name="name" placeholder="Type your name" />
+      <input class="block" id="room" type="text" autocomplete="off" name="room" placeholder="Type room name" />
+      <div class="block" id="error"></div>
+      <input class="block button" id="share" type="button" name="share" value="share" />
+      <a
+        class="block"
+        id="shared"
+        href="https://www.youtube.com/watch?v=HxgOpuDzap8"
+        target="_blank"
+      >
+        <img src="https://ru.stackoverflow.com/favicon.ico" width="16px" height="16px" />
+        <span>taki dily</span>
+      </a>
+      <div class="block" id="usersListTitle">Users in room:</div>
+      <ul id="usersList"></ul>
+      <div class="block" id="status">status:</div>
+      <input class="block button" id="connect" type="button" name="connect" value="connect" />
+    </div>
+  </body>
+  <script src="../scr/popup.js"></script>
+</html>

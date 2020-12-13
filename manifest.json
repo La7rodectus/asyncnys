@@ -16,7 +16,8 @@
   ],
   "browser_action": {
     "default_icon": "./ico/icon_16.png",
-    "default_title": "asyncnys"
+    "default_title": "asyncnys",
+    "default_popup": "./src/html/popup.html"
   },
   "background": {
     "persistent": true,

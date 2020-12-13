@@ -28,6 +28,11 @@ function openNewTab(url) {
 function runtimeMSGSwitch(request) {
   const message = request.message;
   switch (message) {
+    //from popup.js
+    case 'test_f':
+      sendMessageToActiveTab('test_f');
+      break;
+    //from content.js
     case 'open_new_tab':
       openNewTab(request.url);
       break;
@@ -38,14 +43,8 @@ function runtimeMSGSwitch(request) {
 }
 
 //Listeners
-chrome.browserAction.onClicked.addListener((tab) => {
-  sendMessageToActiveTab('clicked_browser_action');
-
-});
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
-
 });
 
 

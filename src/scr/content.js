@@ -50,7 +50,7 @@ function testF() {
 //Event Switches
 function runtimeMSGSwitch(message) {
   switch (message) {
-    case 'clicked_browser_action':
+    case 'test_f':
       testF();
       break;
     default:
@@ -63,6 +63,7 @@ function socketMSGSwitch(message) {
   switch (message) {
     case 'pause':
       testF();
+      console.log('video paused for all users in room');
       break;
     default:
       console.log(message);
@@ -72,8 +73,8 @@ function socketMSGSwitch(message) {
 
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  runtimeMSGSwitch(request.message);
   //chrome.runtime.sendMessage({ 'message': 'open_new_tab', 'url': document.location.href });
+  runtimeMSGSwitch(request.message);
 
 });
 
