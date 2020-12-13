@@ -2,23 +2,50 @@
 /* eslint-disable no-undef */
 /* eslint-disable max-len */
 
+// library
+function sendMessageToActiveTab(msg) {
+  try {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      const message = { 'message': msg };
+      chrome.tabs.sendMessage(activeTab.id, message);
+    });
+  } catch (err) {
+    if (debug) console.error('can\'t sendMessageToActiveTab');
+  }
+}
 
+//Events
+function openNewTab(url) {
+  try {
+    chrome.tabs.create({ url });
+  } catch (err) {
+    console.error(`can't openNewTab: ${url}`);
+  }
+}
 
-// background.js // Вызывается, когда пользователь нажимает на действие браузера.
+//Event Switches
+function runtimeMSGSwitch(request) {
+  const message = request.message;
+  switch (message) {
+    case 'open_new_tab':
+      openNewTab(request.url);
+      break;
+    default:
+      console.log(message);
+      break;
+  }
+}
+
+//Listeners
 chrome.browserAction.onClicked.addListener((tab) => {
-  // Отправить сообщение на активную вкладку
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const activeTab = tabs[0];
-    chrome.tabs.sendMessage(activeTab.id, { 'message': 'clicked_browser_action' });
-  });
+  sendMessageToActiveTab('clicked_browser_action');
+
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.message === 'open_new_tab') {
-    chrome.tabs.create({ 'url': request.url });
+  runtimeMSGSwitch(request);
 
-  }
-}
-);
+});
 
 

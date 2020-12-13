@@ -3,9 +3,6 @@
 /* eslint-disable no-undef */
 const debug = true;
 
-// imports
-//const WebSocket = require('ws');
-
 // library
 function logHref() {
   const windowHref = document.location.href;
@@ -16,7 +13,7 @@ function sendRuntimeMessage(msg) {
   try {
     chrome.runtime.sendMessage(msg);
   } catch (err) {
-    if (debug) throw new Error(err);
+    if (debug) console.error('can\'t sendRuntimeMessage');
   }
 }
 
@@ -41,20 +38,41 @@ function findInFramesSelector(selector, doc) {
 
 }
 
+function testF() {
+  const videoToSync = findInFramesSelector('video', document);
+  if (videoToSync) {
+    videoToSync.pause();
+  }
+  console.log(videoToSync);
+  logHref();
+}
+
+//Event Switches
+function runtimeMSGSwitch(message) {
+  switch (message) {
+    case 'clicked_browser_action':
+      testF();
+      break;
+    default:
+      console.log(message);
+      break;
+  }
+}
+
+function socketMSGSwitch(message) {
+  switch (message) {
+    case 'pause':
+      testF();
+      break;
+    default:
+      console.log(message);
+      break;
+  }
+}
+
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-
-  if (request.message === 'clicked_browser_action') {
-    const videoToSync = findInFramesSelector('video', document);
-    if (videoToSync) {
-      videoToSync.pause();
-    }
-    console.log(videoToSync);
-    logHref();
-  }
-
-
-
+  runtimeMSGSwitch(request.message);
   //chrome.runtime.sendMessage({ 'message': 'open_new_tab', 'url': document.location.href });
 
 });
@@ -72,6 +90,7 @@ socket.onclose = () => {
 };
 
 socket.onmessage = event => {
+  socketMSGSwitch(event.data);
   console.log(event.data);
 };
 
