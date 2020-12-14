@@ -3,11 +3,11 @@
 /* eslint-disable max-len */
 
 // library
-function sendMessageToActiveTab(msg) {
+function sendMessageToActiveTab(msg, data = null) {
   try {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
-      const message = { 'message': msg };
+      const message = { 'message': msg, data };
       chrome.tabs.sendMessage(activeTab.id, message);
     });
   } catch (err) {
@@ -31,6 +31,12 @@ function runtimeMSGSwitch(request) {
     //from popup.js
     case 'test_f':
       sendMessageToActiveTab('test_f');
+      break;
+    case 'connectBtn_clicked':
+      sendMessageToActiveTab('connect_user_to_room', request.data);
+      break;
+    case 'error':
+      console.error(request.data);
       break;
     //from content.js
     case 'open_new_tab':

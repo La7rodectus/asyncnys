@@ -9,9 +9,10 @@ function logHref() {
   console.log(windowHref);
 }
 
-function sendRuntimeMessage(msg) {
+function sendRuntimeMessage(msg, data = null) {
   try {
-    chrome.runtime.sendMessage(msg);
+    const message = { 'message': msg, data };
+    chrome.runtime.sendMessage(message);
   } catch (err) {
     if (debug) console.error('can\'t sendRuntimeMessage');
   }
@@ -47,11 +48,42 @@ function testF() {
   logHref();
 }
 
+
+//WebSocket
+
+const socket = new WebSocket('ws://127.0.0.1:8000/');
+
+socket.onopen = () => {
+  console.log('connected');
+};
+
+socket.onclose = () => {
+  console.log('closed');
+};
+
+socket.onmessage = event => {
+  socketMSGSwitch(event.data);
+  console.log(event.data);
+};
+
+//WebSocket events
+
+function conectUserToRoom(data) {
+  socket.send(JSON.stringify({
+    message: 'conectToRoom',
+    data
+  }));
+}
+
 //Event Switches
-function runtimeMSGSwitch(message) {
+function runtimeMSGSwitch(request) {
+  const message = request.message;
   switch (message) {
     case 'test_f':
       testF();
+      break;
+    case 'connect_user_to_room':
+      conectUserToRoom(request.data);
       break;
     default:
       console.log(message);
@@ -74,25 +106,12 @@ function socketMSGSwitch(message) {
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   //chrome.runtime.sendMessage({ 'message': 'open_new_tab', 'url': document.location.href });
-  runtimeMSGSwitch(request.message);
+  runtimeMSGSwitch(request);
 
 });
 
 
-//WebSocket
-const socket = new WebSocket('ws://127.0.0.1:8000/');
 
-socket.onopen = () => {
-  console.log('connected');
-};
 
-socket.onclose = () => {
-  console.log('closed');
-};
-
-socket.onmessage = event => {
-  socketMSGSwitch(event.data);
-  console.log(event.data);
-};
 
 

@@ -1,5 +1,7 @@
 'use strict';
+/* eslint-disable max-len */
 
+const debug = true;
 
 //get html elements
 const roomField = document.getElementById('room');
@@ -18,14 +20,40 @@ function isDisplayElem(display = false) {
   usersList.style.display = display;
 }
 
+function storageUserName(name) {
+  chrome.storage.sync.set({ name });
+}
+
+function sendRuntimeMessage(msg, data = null) {
+  try {
+    const message = { 'message': msg, data };
+    chrome.runtime.sendMessage(message);
+  } catch (err) {
+    if (debug) console.error('can\'t sendRuntimeMessage');
+  }
+}
+
+function isRoomAndNameCorrect() {
+  if (nameField.value === '' || nameField.value === undefined) return 'incorrect_write_name';
+  if (nameField.value.length < 2 || nameField.value.length > 24) return 'incorrect_name_length';
+  if (roomField.value === '' || roomField.value === undefined) return 'incorrect_write_room';
+  if (roomField.value.length < 2 || roomField.value.length > 24) return 'incorrect_room_length';
+  return true;
+}
 
 //buttons handler
 shareBtn.onclick = () => {
-  chrome.runtime.sendMessage({ message: 'test_f' });
+  sendRuntimeMessage('test_f');
 };
 
 connectBtn.onclick = () => {
-  chrome.runtime.sendMessage({ message: 'connectBtn_clicked' });
+  if (isRoomAndNameCorrect() === true) {
+    const data = { name: nameField.value, room: roomField.value };
+    storageUserName(data.name);
+    sendRuntimeMessage('connectBtn_clicked', data);
+  } else {
+    sendRuntimeMessage('error', isRoomAndNameCorrect());
+  }
 };
 
 
