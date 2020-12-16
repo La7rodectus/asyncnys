@@ -48,54 +48,23 @@ function testF() {
   logHref();
 }
 
-
-//WebSocket
-
-const socket = new WebSocket('ws://127.0.0.1:8000/');
-
-socket.onopen = () => {
-  console.log('connected');
-};
-
-socket.onclose = () => {
-  console.log('closed');
-};
-
-socket.onmessage = event => {
-  socketMSGSwitch(event.data);
-  console.log(event.data);
-};
-
-//WebSocket events
-
-function conectUserToRoom(data) {
-  socket.send(JSON.stringify({
-    message: 'conectToRoom',
-    data
-  }));
-}
-
 //Event Switches
 function runtimeMSGSwitch(request) {
   const message = request.message;
+  console.log(request);
   switch (message) {
+    //background.js
     case 'test_f':
       testF();
       break;
     case 'connect_user_to_room':
       conectUserToRoom(request.data);
       break;
-    default:
-      console.log(message);
+    case 'debug_log':
+      console.log(request.data);
       break;
-  }
-}
-
-function socketMSGSwitch(message) {
-  switch (message) {
-    case 'pause':
-      testF();
-      console.log('video paused for all users in room');
+    case 'error':
+      console.error(request);
       break;
     default:
       console.log(message);

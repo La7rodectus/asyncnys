@@ -1,13 +1,15 @@
 'use strict';
 
 class Room {
-  constructor(name) {
+  constructor(name, roomID) {
     this.name = name;
     this.event = null;
     this.timeUpdated = null;
     this.users = [];
     this.usersLength = 0;
     this.share = null;
+    this.roomID = roomID;
+    this.joinLink;
   }
 
   addUser(socketID, name) {
