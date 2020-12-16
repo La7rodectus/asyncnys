@@ -12,21 +12,22 @@ class Room {
     this.joinLink;
   }
 
-  addUser(socketID, name) {
-    if (this.users[socketID] === undefined) {
-      this.users[socketID] = name;
+  addUser(socket, name) {
+    if (!this.users.find(item => item.name === name)) {
+      this.users.push({ name, socket });
       this.usersLength++;
-    }
+      return true;
+    } else return false;
   }
 
-  disconnectUser(socketID) {
-    console.log(`${this.name}: ${this.getUser(socketID)} disconnected`);
-    delete this.users[socketID];
+  disconnectUser(socket) {
+    console.log(`${this.name}: ${this.getUser(socket)} disconnected`);
+    delete this.users[socket];
     this.usersLength--;
   }
 
-  getUser(socketID) {
-    return this.users[socketID];
+  getUser(socket) {
+    return this.users[socket];
   }
 
   getUsersNames() {

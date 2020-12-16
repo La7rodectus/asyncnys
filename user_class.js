@@ -1,9 +1,9 @@
 'use strict';
 
 class User {
-  constructor(uid, socketID) {
+  constructor(uid, socket) {
     this.uID = uid;
-    this.soketID = socketID;
+    this.soket = socket;
   }
 
 }

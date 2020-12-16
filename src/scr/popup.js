@@ -2,7 +2,6 @@
 /* eslint-disable max-len */
 
 const debug = true;
-
 //get html elements
 const roomField = document.getElementById('room');
 const nameField = document.getElementById('name');
@@ -11,13 +10,35 @@ const shareBtn = document.getElementById('share');
 const sharedText = document.getElementById('shared');
 const usersListTitle = document.getElementById('usersListTitle');
 const usersList = document.getElementById('usersList');
+const statusBar = document.getElementById('status');
 const errorElem = document.getElementById('error');
 
 //library
-function isDisplayElem(display = false) {
+function displayElem(display) {
   sharedText.style.display = display;
   usersListTitle.style.display = display;
   usersList.style.display = display;
+  shareBtn.style.display = display;
+}
+
+function sendMessageToActiveTab(msg, data = null) {
+  try {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+      const message = { 'message': msg, data };
+      chrome.tabs.sendMessage(activeTab.id, message);
+    });
+  } catch (err) {
+    if (debug) console.error('can\'t sendMessageToActiveTab');
+  }
+}
+
+function getFaviconFromUrl(url) {
+  let position = 0;
+  for (let i = 0; i < 3; i++) {
+    position = url.indexOf('/', position);
+    position++;
+  }
 }
 
 function storageUserName(name) {
@@ -41,6 +62,89 @@ function isRoomAndNameCorrect() {
   return true;
 }
 
+function getData(type) {
+  sendMessageToActiveTab(`get${type}`);
+}
+
+function updatePopup() {
+  const typesOfData = ['User', 'Status', 'UsersList', 'Share'];
+  for (const val of typesOfData) getData(val);
+}
+//Runtime Events
+function onStatus(status) {
+  if (status === 'connected') {
+    connectBtn.value = 'disconnect';
+    connectBtn.onclick = () => {
+      sendMessageToActiveTab('disconnect');
+    };
+    displayElem('block');
+  }
+  displayElem('none');
+  statusBar.innerText = 'status: ' + status;
+}
+
+function onShare(data) {
+  if (data !== null) {
+    shareBtn.href = data.url;
+    shareBtn.innerText = '';
+    const img = document.createElement('img');
+    const span = document.createElement('span');
+    img.style.height = '16px';
+    img.src = getFaviconFromUrl(data.url);
+    span.innerText = data.title;
+    shareBtn.appendChild(img);
+    shareBtn.appendChild(span);
+    shareBtn.style.display = 'block';
+  }
+}
+
+function onUserList(list) {
+  usersList.style.display = 'block';
+  usersList.innerText = 'ddddd';
+  list.forEach(element => {
+    const li = document.createElement('li');
+    li.innerText = element.name;
+    usersList.appendChild(li);
+  });
+}
+
+function onSendUser(data) {
+  nameField.value = data.name;
+  roomField.value = data.room;
+}
+
+//Runtime Event Switches
+function runtimeMSGSwitch(request) {
+  const message = request.message;
+  console.log('runtimeMSGSwitch: request');
+  sendMessageToActiveTab('debug_log', request);
+  switch (message) {
+    //content.js
+    case 'status':
+      onStatus(request.data);
+      break;
+    case 'share':
+      onShare(request.data);
+      break;
+    case 'sendUsersList':
+      onUserList(request.data);
+      break;
+    case 'sendUser':
+      onSendUser(request.data);
+      break;
+    case 'debug_log':
+      console.log(request.data);
+      break;
+    case 'error':
+      console.error(request);
+      break;
+    default:
+      console.warn(message);
+      break;
+  }
+}
+
+
 //buttons handler
 shareBtn.onclick = () => {
   sendRuntimeMessage('test_f');
@@ -51,9 +155,18 @@ connectBtn.onclick = () => {
     const data = { name: nameField.value, room: roomField.value };
     storageUserName(data.name);
     sendRuntimeMessage('connectBtn_clicked', data);
+    //displayElem('none');
   } else {
-    sendRuntimeMessage('error', isRoomAndNameCorrect());
+    sendMessageToActiveTab('error', isRoomAndNameCorrect());
   }
 };
 
+//listeners
+chrome.runtime.onMessage.addListener(request => {
+  runtimeMSGSwitch(request);
+});
+
+window.onload = () => {
+  updatePopup();
+};
 

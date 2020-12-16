@@ -15,25 +15,12 @@ function sendMessageToActiveTab(msg, data = null) {
   }
 }
 
-//WebSocket
-const socket = new WebSocket('ws://127.0.0.1:8000/');
-
-socket.onopen = () => {
-  console.log('connected');
-};
-
-socket.onclose = () => {
-  console.log('closed');
-};
-
-
-//WebSocket events
-function conectUserToRoom(data) {
-  socket.send(JSON.stringify({
-    from: 'popup',
-    message: 'conectToRoom',
-    data
-  }));
+function geTActiveTab() {
+  try {
+    return chrome.tabs.query({ active: true, currentWindow: true }, tabs => tabs[0]);
+  } catch (err) {
+    if (debug) console.error('can\'t geTActiveTab');
+  }
 }
 
 //Events
@@ -54,7 +41,7 @@ function runtimeMSGSwitch(request) {
       sendMessageToActiveTab('test_f');
       break;
     case 'connectBtn_clicked':
-      conectUserToRoom(request.data);
+      sendMessageToActiveTab('connect_user_to_room', request.data);
       break;
     case 'error':
       sendMessageToActiveTab('error', request.data);
@@ -74,30 +61,9 @@ function runtimeMSGSwitch(request) {
   }
 }
 
-//WS event Switches
-function socketMSGSwitch(message) {
-  const parsedMSG = JSON.parse(message);
-  switch (parsedMSG.message) {
-    case 'useeList':
-      console.log(message);
-      break;
-    case 'broadcast':
-      testF();
-      console.log(message);
-      break;
-    default:
-      console.log(message);
-      break;
-  }
-}
-
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
 });
 
-socket.onmessage = event => {
-  console.log(event.data);
-  socketMSGSwitch(event.data);
-  sendMessageToActiveTab('debug_log', JSON.parse(event.data));
-};
+
