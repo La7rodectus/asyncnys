@@ -1,4 +1,5 @@
 'use strict';
+
 /* eslint-disable max-len */
 /* eslint-disable no-undef */
 const debug = true;
@@ -13,6 +14,7 @@ const user = {
 //vars
 let status = 'disconnected';
 let userslist = [];
+
 // library
 function logHref() {
   const windowHref = document.location.href;
@@ -79,12 +81,6 @@ function sendUsersListToPopup() {
   sendRuntimeMessage('sendUsersList', userslist);
 }
 
-function exitRoom() {
-  status = 'disconnected';
-  let userslist = [];
-  socket.send()
-}
-
 //WebSocket
 const socket = new WebSocket('ws://127.0.0.1:8000/');
 
@@ -109,6 +105,31 @@ function conectUserToRoom(data) {
   status = 'connected';
 }
 
+function firebroadcast(event) {
+  const videoToSync = findInFramesSelector('video', document);
+  switch (event) {
+    case 'pause':
+      videoToSync.pause();
+      break;
+    case 'play':
+      videoToSync.play();
+      break;
+    default:
+      break;
+  }
+}
+
+function exitRoom() {
+  status = 'disconnected';
+  userslist = [];
+  socket.send(JSON.stringify({
+    from: 'popup',
+    message: 'disconnect',
+    user
+  }));
+  user.room = null;
+}
+
 //WS event Switches
 function socketMSGSwitch(message) {
   const parsedMSG = JSON.parse(message);
@@ -119,8 +140,16 @@ function socketMSGSwitch(message) {
       userslist = parsedMSG.list;
       break;
     case 'broadcast':
-      testF();
+      firebroadcast(parsedMSG.event);
       console.log(message);
+      break;
+    case 'play':
+      user.uid = parsedMSG.uID;
+      console.log('user' + JSON.stringify(user));
+      break;
+    case 'pause':
+      user.uid = parsedMSG.uID;
+      console.log('user' + JSON.stringify(user));
       break;
     case 'uid':
       user.uid = parsedMSG.uID;
@@ -141,6 +170,9 @@ function runtimeMSGSwitch(request) {
     //background.js
     case 'test_f':
       testF();
+      break;
+    case 'tabRemoved':
+      socket.close();
       break;
     case 'connect_user_to_room':
       conectUserToRoom(request.data);
@@ -163,29 +195,85 @@ function runtimeMSGSwitch(request) {
       break;
     }
     case 'disconnect': {
-      status = 'disconnected';
-      socket.close();
+      exitRoom();
       break;
     }
+    //any
     case 'debug_log':
       console.log(request.data);
       break;
     case 'error':
       console.error(request);
       break;
+    //warn
     default:
       console.warn(message);
       break;
   }
 }
 
+//video observer
+function onPlaying(event) {
+  console.log('onPlaying');
+  console.log(event);
+  const message = JSON.stringify({ 'message': 'broadcast', user, eventType: 'play' });
+  if (socket.readyState === socket.OPEN && user.room) {
+    socket.send(message);
+  }
+}
+
+function onPause(event) {
+  console.log('onPause');
+  console.log(event);
+  const message = JSON.stringify({ 'message': 'broadcast', user, eventType: 'pause' });
+  if (socket.readyState === socket.OPEN && user.room) {
+    socket.send(message);
+  }
+
+}
+
+function onSeeked(event) {
+  console.log('onSeeked');
+  console.log(event);
+  const message = JSON.stringify({ 'message': 'broadcast', user, eventType: 'seeked' });
+  if (socket.readyState === socket.OPEN && user.room) {
+    socket.send(message);
+  }
+}
+
+const obsEventsConfig = [
+  { event: 'playing', handler: onPlaying },
+  { event: 'pause', handler: onPause },
+  { event: 'seeked', handler: onSeeked },
+];
+
+function addObsEvents(video, obsEventsConfig) {
+  for (let i = 0; i < obsEventsConfig.length; i++) {
+    video.addEventListener(obsEventsConfig[i].event, obsEventsConfig[i].handler, true);
+  }
+}
+
+function initVideoObserver(obsEventsConfig) {
+  try {
+    const videoToSync = findInFramesSelector('video', document);
+    if (videoToSync) {
+      if (debug) videoToSync.pause();
+      addObsEvents(videoToSync, obsEventsConfig);
+    }
+    if (debug) console.log(videoToSync);
+    console.log('video Observed');
+  } catch (err) {
+    console.log('can\t find or observe video on this page' + err);
+  }
+
+}
+
+//video observer init
+initVideoObserver(obsEventsConfig);
+
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
-});
-
-chrome.tabs.onRemoved.addListener(() => {
-  socket.close();
 });
 
 socket.onmessage = event => {

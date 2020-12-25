@@ -29,12 +29,12 @@ const usedID = [];
 
 ///////// util
 function printServStats() {
-  console.log(` connections - ${countConnections} \n rooms - ${rooms.lenght} \n roomsID - ${countRooms}`);
+  console.log(` connections - ${countConnections} \n rooms - ${rooms} \n roomsID - ${roomsID}`);
 }
 
 if (debug) setInterval(() => {
   printServStats();
-}, 2000);
+}, 5000);
 ////////
 
 //func
@@ -52,28 +52,62 @@ function iDGenerator() {
 }
 
 function broadcast(socket, room, event) {
-  for (const client of ws.clients) {
-    //if (!room.users.includes(client.id)) continue;
+  const roomClients = room.getSocketsArr();
+  for (const client of roomClients) {
     if (client.readyState !== WebSocket.OPEN) continue;
-    //if (client === socket) continue;
+    if (client === socket) continue;
     const message = JSON.stringify({ 'message': 'broadcast', event });
     client.send(message);
   }
 }
 
+function getRoomByUser(user) {
+  for (const room of rooms) {
+    console.log(room);
+    const roomUsers = room.getUsers();
+    for (const RoomUser of roomUsers) {
+      console.log(JSON.stringify(RoomUser.name, user.name));
+      if (RoomUser.name === user.name) {
+        return room;
+      }
+    }
+  }
+}
+
 //socket events
 function disconnect(socket) {
-  const userIndex = users.findIndex(item => item.socketID === socket.id);
+  const userIndex = users.findIndex(item => item.socket === socket);
   const uidIndex = usedID.indexOf[users.uID];
   users.splice(userIndex, 1);
   usedID.splice(uidIndex, 1);
   countConnections--;
   rooms.forEach((room, i) => {
     if (room.nullUsers()) {
+      delete roomsID[room.getRoomID];
+      rooms.splice(i, 1);
+      countRooms--;
+      console.log(roomsID[room.getRoomID]);
+    }
+  });
+  console.log('rooms stats');
+  console.dir(rooms);
+  console.dir(roomsID);
+}
+
+function disconnectFromRoom(user) {
+  rooms.forEach(room => room.disconnectUser(user.name));
+  rooms.forEach((room, i) => {
+    console.log(room);
+    if (room.nullUsers()) {
+      console.log('delete roomsID[room.getRoomID()]');
+      delete roomsID[room.getRoomID()];
       rooms.splice(i, 1);
       countRooms--;
     }
   });
+  console.log('rooms stats');
+  console.dir(rooms);
+  console.dir(roomsID);
 }
 
 function conectUserToRoom(socket, data) {
@@ -83,7 +117,7 @@ function conectUserToRoom(socket, data) {
   if (room) {
     room.addUser(socket, data.name);
     broadcast(socket, room, 'pause');
-
+    broadcast(socket, room, 'usersList');
     if (room.share !== null) socket.emit('share', room.share);
     if (room.usersLength > 1 && room.timeUpdated !== null) {
       room.event.currentTime =
@@ -113,9 +147,14 @@ function conectUserToRoom(socket, data) {
 function serverSocketEventsSwitch(socket, message) {
   const parsedMSG = JSON.parse(message);
   switch (parsedMSG.message) {
-    //background.js
     case 'conectToRoom':
       conectUserToRoom(socket, parsedMSG.data);
+      break;
+    case 'disconnect':
+      disconnectFromRoom(parsedMSG.user);
+      break;
+    case 'broadcast':
+      broadcast(socket, getRoomByUser(parsedMSG.user), parsedMSG.eventType);
       break;
     case 'error':
       console.error(parsedMSG);
@@ -144,7 +183,6 @@ ws.on('connection', (socket, req) => {
 
   socket.on('close', () => {
     console.log(`disconnected ${ip}`);
-
     disconnect(socket);
   });
 

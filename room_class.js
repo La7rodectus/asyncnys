@@ -9,7 +9,18 @@ class Room {
     this.usersLength = 0;
     this.share = null;
     this.roomID = roomID;
-    this.joinLink;
+  }
+
+  getSocketsArr() {
+    const socketList = [];
+    for (let i = 0; i < this.usersLength; i++) {
+      socketList.push(this.users[i].socket);
+    }
+    return socketList;
+  }
+
+  getUsers() {
+    return this.users;
   }
 
   addUser(socket, name) {
@@ -20,14 +31,15 @@ class Room {
     } else return false;
   }
 
-  disconnectUser(socket) {
-    console.log(`${this.name}: ${this.getUser(socket)} disconnected`);
-    delete this.users[socket];
+  disconnectUser(name) {
+    console.log(`room ${this.name}: ${this.getUser(name)} disconnected`);
+    const userIndex = this.users.findIndex(item => item.name === name);
+    this.users.splice(userIndex, 1);
     this.usersLength--;
   }
 
-  getUser(socket) {
-    return this.users[socket];
+  getUser(name) {
+    return this.users.find(item => item.name === name).name;
   }
 
   getUsersNames() {
@@ -37,8 +49,12 @@ class Room {
   }
 
   nullUsers() {
-    if (!this.usersLength) return true;
+    if (this.usersLength <= 0) return true;
     return false;
+  }
+
+  getRoomID() {
+    return this.roomID;
   }
 
 }

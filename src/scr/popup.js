@@ -41,10 +41,6 @@ function getFaviconFromUrl(url) {
   }
 }
 
-function storageUserName(name) {
-  chrome.storage.sync.set({ name });
-}
-
 function sendRuntimeMessage(msg, data = null) {
   try {
     const message = { 'message': msg, data };
@@ -70,9 +66,12 @@ function updatePopup() {
   const typesOfData = ['User', 'Status', 'UsersList', 'Share'];
   for (const val of typesOfData) getData(val);
 }
+
 //Runtime Events
 function onStatus(status) {
   if (status === 'connected') {
+    nameField.style.readonly = 'readonly';
+    roomField.style.readonly = 'readonly';
     connectBtn.value = 'disconnect';
     connectBtn.onclick = () => {
       sendMessageToActiveTab('disconnect');
@@ -100,7 +99,7 @@ function onShare(data) {
 
 function onUserList(list) {
   usersList.style.display = 'block';
-  usersList.innerText = 'ddddd';
+  usersList.innerText = 'users in room:';
   list.forEach(element => {
     const li = document.createElement('li');
     li.innerText = element.name;
@@ -153,7 +152,6 @@ shareBtn.onclick = () => {
 connectBtn.onclick = () => {
   if (isRoomAndNameCorrect() === true) {
     const data = { name: nameField.value, room: roomField.value };
-    storageUserName(data.name);
     sendRuntimeMessage('connectBtn_clicked', data);
     //displayElem('none');
   } else {
