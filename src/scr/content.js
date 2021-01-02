@@ -14,13 +14,11 @@ const user = {
 //vars
 let status = 'disconnected';
 let userslist = [];
+let socket = undefined;
+let videoToSync = null;
+let lastEvent = undefined;
 
 // library
-function logHref() {
-  const windowHref = document.location.href;
-  console.log(windowHref);
-}
-
 function sendRuntimeMessage(msg, data = null) {
   try {
     const message = { 'message': msg, data };
@@ -51,15 +49,6 @@ function findInFramesSelector(selector, doc) {
 
 }
 
-function testF() {
-  const videoToSync = findInFramesSelector('video', document);
-  if (videoToSync) {
-    videoToSync.pause();
-  }
-  console.log(videoToSync);
-  logHref();
-}
-
 function sendUserToPopup() {
   sendRuntimeMessage('sendUser', user);
 }
@@ -81,84 +70,11 @@ function sendUsersListToPopup() {
   sendRuntimeMessage('sendUsersList', userslist);
 }
 
-//WebSocket
-const socket = new WebSocket('ws://127.0.0.1:8000/');
-
-socket.onopen = () => {
-  console.log('connected');
-};
-
-socket.onclose = () => {
-  console.log('closed');
-};
-
-
-//WebSocket events
-function conectUserToRoom(data) {
-  user.name = data.name;
-  user.room = data.room;
-  socket.send(JSON.stringify({
-    from: 'popup',
-    message: 'conectToRoom',
-    data
-  }));
-  status = 'connected';
-}
-
-function firebroadcast(event) {
-  const videoToSync = findInFramesSelector('video', document);
-  switch (event) {
-    case 'pause':
-      videoToSync.pause();
-      break;
-    case 'play':
-      videoToSync.play();
-      break;
-    default:
-      break;
-  }
-}
-
-function exitRoom() {
-  status = 'disconnected';
-  userslist = [];
-  socket.send(JSON.stringify({
-    from: 'popup',
-    message: 'disconnect',
-    user
-  }));
-  user.room = null;
-}
-
-//WS event Switches
-function socketMSGSwitch(message) {
-  const parsedMSG = JSON.parse(message);
-  console.log('socketMSGSwitch:');
-  console.log(parsedMSG);
-  switch (parsedMSG.message) {
-    case 'usersList':
-      userslist = parsedMSG.list;
-      break;
-    case 'broadcast':
-      firebroadcast(parsedMSG.event);
-      console.log(message);
-      break;
-    case 'play':
-      user.uid = parsedMSG.uID;
-      console.log('user' + JSON.stringify(user));
-      break;
-    case 'pause':
-      user.uid = parsedMSG.uID;
-      console.log('user' + JSON.stringify(user));
-      break;
-    case 'uid':
-      user.uid = parsedMSG.uID;
-      console.log('user' + JSON.stringify(user));
-      break;
-    default:
-      console.warn(message);
-      break;
-  }
+function updatePopupData() {
+  sendShareToPopup('url');
+  sendStatusToPopup(status);
+  sendUserToPopup();
+  sendUsersListToPopup();
 }
 
 //Runtime Event Switches
@@ -168,40 +84,19 @@ function runtimeMSGSwitch(request) {
   console.log(request);
   switch (message) {
     //background.js
-    case 'test_f':
-      testF();
-      break;
-    case 'tabRemoved':
-      socket.close();
-      break;
     case 'connect_user_to_room':
       conectUserToRoom(request.data);
       break;
     //popup.js
-    case 'getUser': {
-      sendUserToPopup();
-      break;
-    }
-    case 'getStatus': {
-      sendStatusToPopup();
-      break;
-    }
-    case 'getUsersList': {
-      sendUsersListToPopup();
-      break;
-    }
-    case 'getShare': {
-      sendShareToPopup();
+    case 'updatePopup': {
+      updatePopupData();
       break;
     }
     case 'disconnect': {
-      exitRoom();
+      disconnect();
       break;
     }
     //any
-    case 'debug_log':
-      console.log(request.data);
-      break;
     case 'error':
       console.error(request);
       break;
@@ -214,30 +109,51 @@ function runtimeMSGSwitch(request) {
 
 //video observer
 function onPlaying(event) {
-  console.log('onPlaying');
-  console.log(event);
-  const message = JSON.stringify({ 'message': 'broadcast', user, eventType: 'play' });
-  if (socket.readyState === socket.OPEN && user.room) {
-    socket.send(message);
+  if (videoToSync.readyState === 4) { // fix seeking recursion
+    console.log('onPlaying');
+    console.log(event);
+    const message = JSON.stringify({
+      'message': 'broadcast',
+      user,
+      eventType: 'play',
+      videoTime: videoToSync.currentTime,
+    });
+    if (socket.readyState === socket.OPEN && user.room && socket) {
+      socket.send(message);
+    }
   }
 }
 
 function onPause(event) {
-  console.log('onPause');
-  console.log(event);
-  const message = JSON.stringify({ 'message': 'broadcast', user, eventType: 'pause' });
-  if (socket.readyState === socket.OPEN && user.room) {
-    socket.send(message);
+  if (videoToSync.readyState === 4) { // fix seeking recursion
+    console.log('onPause');
+    console.log(event);
+    const message = JSON.stringify({
+      'message': 'broadcast',
+      user,
+      eventType: 'pause',
+      videoTime: videoToSync.currentTime,
+    });
+    if (socket.readyState === socket.OPEN && user.room && socket) {
+      socket.send(message);
+    }
   }
 
 }
 
 function onSeeked(event) {
-  console.log('onSeeked');
-  console.log(event);
-  const message = JSON.stringify({ 'message': 'broadcast', user, eventType: 'seeked' });
-  if (socket.readyState === socket.OPEN && user.room) {
-    socket.send(message);
+  if (videoToSync.readyState === 4) {
+    console.log('onSeeked');
+    console.log(event);
+    const message = JSON.stringify({
+      'message': 'broadcast',
+      user,
+      eventType: 'seeked',
+      videoTime: videoToSync.currentTime,
+    });
+    if (socket.readyState === socket.OPEN && user.room && socket) {
+      socket.send(message);
+    }
   }
 }
 
@@ -255,9 +171,8 @@ function addObsEvents(video, obsEventsConfig) {
 
 function initVideoObserver(obsEventsConfig) {
   try {
-    const videoToSync = findInFramesSelector('video', document);
+    videoToSync = findInFramesSelector('video', document);
     if (videoToSync) {
-      if (debug) videoToSync.pause();
       addObsEvents(videoToSync, obsEventsConfig);
     }
     if (debug) console.log(videoToSync);
@@ -268,16 +183,94 @@ function initVideoObserver(obsEventsConfig) {
 
 }
 
-//video observer init
-initVideoObserver(obsEventsConfig);
+//WebSocket
+//WebSocket events
+function conectUserToRoom(data) {
+  socket = new WebSocket('ws://127.0.0.1:8000/');
+  //video observer init
+  initVideoObserver(obsEventsConfig);
+
+  socket.onopen = () => {
+    user.name = data.name;
+    user.room = data.room;
+    data.videoTime = videoToSync.currentTime;
+    status = 'connected';
+    socket.send(JSON.stringify({
+      from: 'popup',
+      message: 'conectToRoom',
+      data
+    }));
+    console.log('connected');
+
+    socket.onclose = () => {
+      console.log('closed');
+    };
+    socket.onmessage = event => {
+      socketMSGSwitch(event.data);
+    };
+  };
+}
+
+function firebroadcast(event) {
+  lastEvent = event.type;
+  switch (event.type) {
+    case 'pause':
+      videoToSync.pause();
+      break;
+    case 'play':
+      videoToSync.play();
+      break;
+    case 'seeked':
+      videoToSync.currentTime = event.videoTime;
+      break;
+    case 'usersList':
+      userslist = event.list;
+      sendUsersListToPopup();
+      break;
+    case 'updateTime':
+      break;
+    default:
+      console.warn('can\'t find event to fire');
+      break;
+  }
+}
+
+function disconnect() {
+  status = 'disconnected';
+  userslist = [];
+  socket.send(JSON.stringify({
+    from: 'popup',
+    message: 'disconnect',
+    user
+  }));
+  user.room = null;
+  socket = undefined;
+}
+
+//WS event Switches
+function socketMSGSwitch(message) {
+  const parsedMSG = JSON.parse(message);
+  console.log('socketMSGSwitch:');
+  console.log(parsedMSG);
+  switch (parsedMSG.message) {
+    case 'broadcast':
+      firebroadcast(parsedMSG.event);
+      break;
+    case 'uid':
+      user.uid = parsedMSG.uID;
+      console.log('user' + JSON.stringify(user));
+      break;
+    default:
+      console.warn(message);
+      break;
+  }
+}
 
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
 });
 
-socket.onmessage = event => {
-  socketMSGSwitch(event.data);
-};
+
 
 

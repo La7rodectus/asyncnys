@@ -58,13 +58,8 @@ function isRoomAndNameCorrect() {
   return true;
 }
 
-function getData(type) {
-  sendMessageToActiveTab(`get${type}`);
-}
-
 function updatePopup() {
-  const typesOfData = ['User', 'Status', 'UsersList', 'Share'];
-  for (const val of typesOfData) getData(val);
+  sendMessageToActiveTab('updatePopup');
 }
 
 //Runtime Events
@@ -116,7 +111,6 @@ function onSendUser(data) {
 function runtimeMSGSwitch(request) {
   const message = request.message;
   console.log('runtimeMSGSwitch: request');
-  sendMessageToActiveTab('debug_log', request);
   switch (message) {
     //content.js
     case 'status':
@@ -152,7 +146,7 @@ shareBtn.onclick = () => {
 connectBtn.onclick = () => {
   if (isRoomAndNameCorrect() === true) {
     const data = { name: nameField.value, room: roomField.value };
-    sendRuntimeMessage('connectBtn_clicked', data);
+    sendMessageToActiveTab('connect_user_to_room', data);
     //displayElem('none');
   } else {
     sendMessageToActiveTab('error', isRoomAndNameCorrect());

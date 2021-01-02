@@ -3,8 +3,8 @@
 class Room {
   constructor(name, roomID) {
     this.name = name;
-    this.event = null;
-    this.timeUpdated = null;
+    this.event = undefined;
+    this.roomTime = 0;
     this.users = [];
     this.usersLength = 0;
     this.share = null;

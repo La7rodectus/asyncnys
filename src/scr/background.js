@@ -66,8 +66,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
 });
 
-//chrome.tabs.onRemoved.addListener(tab => {
-// const message = { 'message': 'tabRemoved' };
-//chrome.tabs.sendMessage(tab.id, message);
-//});
 

@@ -51,11 +51,12 @@ function iDGenerator() {
   }
 }
 
-function broadcast(socket, room, event) {
+function broadcast(socket, room, event, selfCast = false) {
+  room.event = event;
   const roomClients = room.getSocketsArr();
   for (const client of roomClients) {
     if (client.readyState !== WebSocket.OPEN) continue;
-    if (client === socket) continue;
+    if (client === socket && !selfCast) continue;
     const message = JSON.stringify({ 'message': 'broadcast', event });
     client.send(message);
   }
@@ -66,7 +67,6 @@ function getRoomByUser(user) {
     console.log(room);
     const roomUsers = room.getUsers();
     for (const RoomUser of roomUsers) {
-      console.log(JSON.stringify(RoomUser.name, user.name));
       if (RoomUser.name === user.name) {
         return room;
       }
@@ -94,17 +94,24 @@ function disconnect(socket) {
   console.dir(roomsID);
 }
 
-function disconnectFromRoom(user) {
-  rooms.forEach(room => room.disconnectUser(user.name));
+function disconnectFromRoom(socket, user) {
+  const room = getRoomByUser(user);
+  room.disconnectUser(user.name);
+  const event = {
+    'type': 'usersList',
+    videoTime: room.event.videoTime,
+    list: room.getUsersNames()
+  };
+  broadcast(socket, room, event);
   rooms.forEach((room, i) => {
     console.log(room);
     if (room.nullUsers()) {
-      console.log('delete roomsID[room.getRoomID()]');
       delete roomsID[room.getRoomID()];
       rooms.splice(i, 1);
       countRooms--;
     }
   });
+  socket.close();
   console.log('rooms stats');
   console.dir(rooms);
   console.dir(roomsID);
@@ -112,20 +119,15 @@ function disconnectFromRoom(user) {
 
 function conectUserToRoom(socket, data) {
   if (debug) console.log('socket: conectToRoom');
-  console.log(rooms);
   let room = rooms.find(item => item.name === data.room);
   if (room) {
     room.addUser(socket, data.name);
-    broadcast(socket, room, 'pause');
-    broadcast(socket, room, 'usersList');
+    room.event = {
+      'type': 'pause',
+      videoTime: data.videoTime,
+    };
+    broadcast(socket, room, room.event, true);
     if (room.share !== null) socket.emit('share', room.share);
-    if (room.usersLength > 1 && room.timeUpdated !== null) {
-      room.event.currentTime =
-        room.event.type === 'play' ?
-          room.event.currentTime + (Date.now() - room.timeUpdated) / 1000 :
-          room.event.currentTime;
-      // Time is about second earlier then needed
-    }
   } else {
     room = new Room(data.room, iDGenerator());
     countRooms++;
@@ -133,11 +135,12 @@ function conectUserToRoom(socket, data) {
     rooms.push(room);
     roomsID[room.roomID] = room;
   }
-  const message = JSON.stringify({
-    'message': 'usersList',
-    list: room.getUsersNames()
-  });
-  socket.send(message);
+  room.event = {
+    'type': 'usersList',
+    videoTime: data.videoTime,
+    list: room.getUsersNames(),
+  };
+  broadcast(socket, room, room.event, true);
   console.log(rooms);
   console.log(room);
   if (debug) console.log(`connected to room: ${countConnections} ${JSON.stringify(data)}`);
@@ -151,10 +154,10 @@ function serverSocketEventsSwitch(socket, message) {
       conectUserToRoom(socket, parsedMSG.data);
       break;
     case 'disconnect':
-      disconnectFromRoom(parsedMSG.user);
+      disconnectFromRoom(socket, parsedMSG.user);
       break;
     case 'broadcast':
-      broadcast(socket, getRoomByUser(parsedMSG.user), parsedMSG.eventType);
+      broadcast(socket, getRoomByUser(parsedMSG.user), { 'type': parsedMSG.eventType, 'videoTime': parsedMSG.videoTime });
       break;
     case 'error':
       console.error(parsedMSG);
@@ -188,4 +191,3 @@ ws.on('connection', (socket, req) => {
 
   countConnections++;
 });
-
