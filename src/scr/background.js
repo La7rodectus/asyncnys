@@ -47,10 +47,6 @@ function runtimeMSGSwitch(request) {
       sendMessageToActiveTab('error', request.data);
       console.error(request.data);
       break;
-    case 'debug_log':
-      sendMessageToActiveTab('debug_log', request.data);
-      console.log(request.data);
-      break;
     //from content.js
     case 'open_new_tab':
       openNewTab(request.url);

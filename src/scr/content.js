@@ -16,7 +16,6 @@ let status = 'disconnected';
 let userslist = [];
 let socket = undefined;
 let videoToSync = null;
-let lastEvent = undefined;
 
 // library
 function sendRuntimeMessage(msg, data = null) {
@@ -109,7 +108,7 @@ function runtimeMSGSwitch(request) {
 
 //video observer
 function onPlaying(event) {
-  if (videoToSync.readyState === 4) { // fix seeking recursion
+  if (videoToSync.readyState === 4 && videoToSync.play) {
     console.log('onPlaying');
     console.log(event);
     const message = JSON.stringify({
@@ -125,7 +124,7 @@ function onPlaying(event) {
 }
 
 function onPause(event) {
-  if (videoToSync.readyState === 4) { // fix seeking recursion
+  if (videoToSync.readyState === 4 && videoToSync.pause) {
     console.log('onPause');
     console.log(event);
     const message = JSON.stringify({
@@ -142,7 +141,7 @@ function onPause(event) {
 }
 
 function onSeeked(event) {
-  if (videoToSync.readyState === 4) {
+  if (videoToSync.readyState === 4 && !videoToSync.seeked) {
     console.log('onSeeked');
     console.log(event);
     const message = JSON.stringify({
@@ -211,17 +210,26 @@ function conectUserToRoom(data) {
   };
 }
 
+function fireSeeked(event) {
+  const MAXVIDEOTIMEDEFF = 0.5;
+  videoToSync.pause();
+  const deltaVideoTime = Math.abs(event.videoTime - videoToSync.currentTime);
+  if (videoToSync.readyState === 4 && deltaVideoTime > MAXVIDEOTIMEDEFF) { // fix seeking recursion
+    videoToSync.currentTime = event.videoTime;
+  }
+}
+
 function firebroadcast(event) {
-  lastEvent = event.type;
+  console.log(event, videoToSync.currentTime);
   switch (event.type) {
     case 'pause':
-      videoToSync.pause();
+      if (videoToSync.readyState === 4) videoToSync.pause();
       break;
     case 'play':
-      videoToSync.play();
+      if (videoToSync.readyState === 4) videoToSync.play();
       break;
     case 'seeked':
-      videoToSync.currentTime = event.videoTime;
+      fireSeeked(event);
       break;
     case 'usersList':
       userslist = event.list;
@@ -245,6 +253,7 @@ function disconnect() {
   }));
   user.room = null;
   socket = undefined;
+  videoToSync = undefined;
 }
 
 //WS event Switches
