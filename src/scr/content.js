@@ -207,6 +207,7 @@ function conectUserToRoom(data) {
     socket.onmessage = event => {
       socketMSGSwitch(event.data);
     };
+    updatePopupData();
   };
 }
 
@@ -235,8 +236,6 @@ function firebroadcast(event) {
       userslist = event.list;
       sendUsersListToPopup();
       break;
-    case 'updateTime':
-      break;
     default:
       console.warn('can\'t find event to fire');
       break;
@@ -246,14 +245,19 @@ function firebroadcast(event) {
 function disconnect() {
   status = 'disconnected';
   userslist = [];
-  socket.send(JSON.stringify({
-    from: 'popup',
-    message: 'disconnect',
-    user
-  }));
+  if (socket) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        from: 'popup',
+        message: 'disconnect',
+        user
+      }));
+    }
+  }
   user.room = null;
   socket = undefined;
   videoToSync = undefined;
+  updatePopupData();
 }
 
 //WS event Switches
@@ -267,7 +271,6 @@ function socketMSGSwitch(message) {
       break;
     case 'uid':
       user.uid = parsedMSG.uID;
-      console.log('user' + JSON.stringify(user));
       break;
     default:
       console.warn(message);
@@ -281,5 +284,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 
-
+window.onbeforeunload = () => disconnect();
 

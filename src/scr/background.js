@@ -62,4 +62,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
 });
 
-
+chrome.tabs.onUpdated.addListener((request, sender, sendResponse) => {
+  runtimeMSGSwitch(request);
+});

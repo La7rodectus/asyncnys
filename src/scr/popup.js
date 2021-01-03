@@ -62,16 +62,33 @@ function updatePopup() {
   sendMessageToActiveTab('updatePopup');
 }
 
+function connectBtnAction() {
+  if (isRoomAndNameCorrect() === true) {
+    const data = { name: nameField.value, room: roomField.value };
+    sendMessageToActiveTab('connect_user_to_room', data);
+    //displayElem('none');
+  } else {
+    errorElem.style.display = 'block';
+    sendMessageToActiveTab('error', isRoomAndNameCorrect());
+    setTimeout(() => errorElem.style.display = 'none', 2000);
+    errorElem.innerText = isRoomAndNameCorrect();
+  }
+  updatePopup();
+}
+
 //Runtime Events
 function onStatus(status) {
   if (status === 'connected') {
-    nameField.style.readonly = 'readonly';
-    roomField.style.readonly = 'readonly';
+    nameField.readOnly = true;
+    roomField.readOnly = true;
     connectBtn.value = 'disconnect';
-    connectBtn.onclick = () => {
-      sendMessageToActiveTab('disconnect');
-    };
+    connectBtn.onclick = () => sendMessageToActiveTab('disconnect');
     displayElem('block');
+  } else {
+    nameField.readOnly = false;
+    roomField.readOnly = false;
+    connectBtn.value = 'connect';
+    connectBtn.onclick = () => connectBtnAction();
   }
   displayElem('none');
   statusBar.innerText = 'status: ' + status;
@@ -143,15 +160,7 @@ shareBtn.onclick = () => {
   sendRuntimeMessage('test_f');
 };
 
-connectBtn.onclick = () => {
-  if (isRoomAndNameCorrect() === true) {
-    const data = { name: nameField.value, room: roomField.value };
-    sendMessageToActiveTab('connect_user_to_room', data);
-    //displayElem('none');
-  } else {
-    sendMessageToActiveTab('error', isRoomAndNameCorrect());
-  }
-};
+connectBtn.onclick = () => connectBtnAction();
 
 //listeners
 chrome.runtime.onMessage.addListener(request => {
