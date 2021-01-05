@@ -44,7 +44,7 @@ class Room {
 
   getUsersNames() {
     const list = [];
-    for (const key in this.users) list.push(this.users[key]);
+    for (const key in this.users) list.push(this.users[key]).name;
     return list.sort();
   }
 
