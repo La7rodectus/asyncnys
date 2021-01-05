@@ -88,14 +88,14 @@ function broadcast(socket, room, event, selfCast = false) {
   for (const client of roomClients) {
     if (client.readyState !== WebSocket.OPEN) continue;
     if (client === socket && !selfCast) continue;
-    const msg = JSON.stringify({ 'message': 'broadcast', 'event': event });
+    console.log(event);
+    const msg = JSON.stringify({ 'message': 'broadcast', event });
     client.send(msg);
   }
 }
 
 function getRoomByUser(user) {
   for (const room of rooms) {
-    console.log(room);
     const roomUsers = room.getUsers();
     for (const RoomUser of roomUsers) {
       if (RoomUser.name === user.name) {
@@ -108,11 +108,7 @@ function getRoomByUser(user) {
 //socket events
 function disconnect(socket, user) {
   const userIndex = users.findIndex(item => item.uID === user.uid);
-  console.log(userIndex);
-  console.log(users);
-  console.log(usedID);
   const uidIndex = usedID.findIndex(item => item === user.uid);
-  console.log(uidIndex);
   users.splice(userIndex, 1);
   usedID.splice(uidIndex, 1);
   countConnections--;
@@ -121,13 +117,12 @@ function disconnect(socket, user) {
       delete roomsID[room.getRoomID];
       rooms.splice(i, 1);
       countRooms--;
-      console.log(roomsID[room.getRoomID]);
     }
   });
   socket.close();
   console.log('rooms stats');
+  console.log(users);
   console.dir(rooms);
-  console.dir(roomsID);
 }
 
 function disconnectFromRoom(socket, user) {
@@ -162,7 +157,8 @@ function conectUserToRoom(socket, data) {
       'type': 'pause',
       videoTime: data.videoTime,
     };
-    broadcast(socket, room, room.event, true);
+    const event = room.event;
+    broadcast(socket, room, event, true);
     if (room.share !== null) socket.emit('share', room.share);
   } else {
     room = new Room(data.room, iDGenerator());
@@ -212,12 +208,10 @@ ws.on('connection', (socket, req) => {
 
   const uID = iDGenerator();
   users.push(new User(uID, socket));
-  if (debug) console.log(users[countConnections].uID);
   const message = JSON.stringify({ 'message': 'uid', uID });
   socket.send(message);
 
   socket.on('message', message => {
-    console.log(users);
     console.log('Received: ' + message);
     serverSocketEventsSwitch(socket, message);
   });
