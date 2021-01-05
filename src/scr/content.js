@@ -192,7 +192,7 @@ function initVideoObserver(obsEventsConfig) {
 //WebSocket
 //WebSocket events
 function conectUserToRoom(data) {
-  socket = new WebSocket('ws://asyncnyshook.herokuapp.com/');
+  socket = new WebSocket('wss://asyncnyshook.herokuapp.com/');
   //socket = new WebSocket('ws://127.0.0.1:8000/');
   //video observer init
   initVideoObserver(obsEventsConfig);
