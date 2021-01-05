@@ -113,9 +113,9 @@ function onShare(data) {
 function onUserList(list) {
   usersList.style.display = 'block';
   usersList.innerText = 'users in room ' + roomField.value + ':';
-  list.forEach(element => {
+  list.forEach(userName => {
     const li = document.createElement('li');
-    li.innerText = element.name;
+    li.innerText = userName;
     usersList.appendChild(li);
   });
 }

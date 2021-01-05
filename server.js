@@ -157,8 +157,7 @@ function conectUserToRoom(socket, data) {
       'type': 'pause',
       videoTime: data.videoTime,
     };
-    const event = room.event;
-    broadcast(socket, room, event, true);
+    broadcast(socket, room, room.event, true);
     if (room.share !== null) socket.emit('share', room.share);
   } else {
     room = new Room(data.room, iDGenerator());
