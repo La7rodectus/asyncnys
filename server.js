@@ -88,8 +88,8 @@ function broadcast(socket, room, event, selfCast = false) {
   for (const client of roomClients) {
     if (client.readyState !== WebSocket.OPEN) continue;
     if (client === socket && !selfCast) continue;
-    //const msg = ;
-    client.send(JSON.stringify({ 'message': 'broadcast', event }));
+    const msg = JSON.stringify({ 'message': 'broadcast', event });
+    client.send(msg);
   }
 }
 
