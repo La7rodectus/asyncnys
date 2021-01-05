@@ -58,10 +58,12 @@ function sendStatusToPopup(newStatus) {
 }
 
 function sendShareToPopup(data) {
-  if (status === 'connect') {
-    if (data !== undefined) share = data;
-    sendRuntimeMessage('share', share);
-    //chrome.runtime.sendMessage({ from: 'share', data: share });
+  if (status === 'connected') {
+    if (data !== undefined) {
+      sendRuntimeMessage('share', data);
+      console.log(data);
+    }
+
   }
 }
 
@@ -70,7 +72,7 @@ function sendUsersListToPopup() {
 }
 
 function updatePopupData() {
-  sendShareToPopup('url');
+  sendShareToPopup({ url: document.location.href });
   sendStatusToPopup(status);
   sendUserToPopup();
   sendUsersListToPopup();
@@ -89,6 +91,11 @@ function runtimeMSGSwitch(request) {
     //popup.js
     case 'updatePopup': {
       updatePopupData();
+      break;
+    }
+    case 'share': {
+      sendRuntimeMessage('share', { url: document.location.href });
+      sendShareToPopup({ url: document.location.href });
       break;
     }
     case 'disconnect': {
@@ -185,7 +192,7 @@ function initVideoObserver(obsEventsConfig) {
 //WebSocket
 //WebSocket events
 function conectUserToRoom(data) {
-  socket = new WebSocket('ws://127.0.0.1:8000/');
+  socket = new WebSocket('wss://asyncnyshook.herokuapp.com/');
   //video observer init
   initVideoObserver(obsEventsConfig);
 

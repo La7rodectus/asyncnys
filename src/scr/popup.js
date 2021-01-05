@@ -66,7 +66,6 @@ function connectBtnAction() {
   if (isRoomAndNameCorrect() === true) {
     const data = { name: nameField.value, room: roomField.value };
     sendMessageToActiveTab('connect_user_to_room', data);
-    //displayElem('none');
   } else {
     errorElem.style.display = 'block';
     sendMessageToActiveTab('error', isRoomAndNameCorrect());
@@ -84,25 +83,27 @@ function onStatus(status) {
     connectBtn.value = 'disconnect';
     connectBtn.onclick = () => sendMessageToActiveTab('disconnect');
     displayElem('block');
+    sharedText.value = 'sharedText';
   } else {
     nameField.readOnly = false;
     roomField.readOnly = false;
     connectBtn.value = 'connect';
     connectBtn.onclick = () => connectBtnAction();
+    displayElem('none');
   }
-  displayElem('none');
   statusBar.innerText = 'status: ' + status;
 }
 
 function onShare(data) {
+  console.log(data);
   if (data !== null) {
     shareBtn.href = data.url;
-    shareBtn.innerText = '';
+    shareBtn.innerText = 'sdsda';
     const img = document.createElement('img');
     const span = document.createElement('span');
     img.style.height = '16px';
     img.src = getFaviconFromUrl(data.url);
-    span.innerText = data.title;
+    span.innerText = 'sdsda';//data.title;
     shareBtn.appendChild(img);
     shareBtn.appendChild(span);
     shareBtn.style.display = 'block';
@@ -111,7 +112,7 @@ function onShare(data) {
 
 function onUserList(list) {
   usersList.style.display = 'block';
-  usersList.innerText = 'users in room:';
+  usersList.innerText = 'users in room ' + roomField.value + ':';
   list.forEach(element => {
     const li = document.createElement('li');
     li.innerText = element.name;
@@ -156,10 +157,7 @@ function runtimeMSGSwitch(request) {
 
 
 //buttons handler
-shareBtn.onclick = () => {
-  sendRuntimeMessage('test_f');
-};
-
+shareBtn.onclick = () => sendMessageToActiveTab('share');
 connectBtn.onclick = () => connectBtnAction();
 
 //listeners
