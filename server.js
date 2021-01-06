@@ -51,35 +51,14 @@ function iDGenerator() {
   }
 }
 
-function deepEqualObj(obj1, obj2) {
-  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') {
-    return false;
-  }
-  if (obj1 === undefined || obj2 === undefined) {
-    return false;
-  }
-  if (obj1 === null || obj2 === null) {
-    return false;
-  }
-  const obj1Keys = Object.keys(obj1);
-  const obj2Keys = Object.keys(obj2);
-  if (obj1Keys.length !== obj2Keys.length) {
-    return false;
-  }
-  for (let i = 0; i < obj1Keys.length; i++) {
-    if (obj2Keys.includes(obj1Keys[i]) === false) {
-      return false;
+// fix heroku router 55sec limit
+function keepConnectionsAlive() {
+  setInterval(() => {
+    for (const client of ws.clients) {
+      const msg = JSON.stringify({ 'message': 'ping' });
+      client.send(msg);
     }
-  }
-  for (let i = 0; i < obj1Keys.length; i++) {
-    if (typeof obj1[obj1Keys[i]] === 'object') {
-      return deepEqualObj(obj1[obj1Keys[i]], obj2[obj1Keys[i]]);
-    }
-    if (obj1[obj1Keys[i]] !== obj2[obj2Keys[i]]) {
-      return false;
-    }
-  }
-  return true;
+  }, 15000);
 }
 
 function broadcast(socket, room, event, selfCast = false) {
@@ -158,7 +137,6 @@ function conectUserToRoom(socket, data) {
       videoTime: data.videoTime,
     };
     broadcast(socket, room, room.event, true);
-    if (room.share !== null) socket.emit('share', room.share);
   } else {
     room = new Room(data.room, iDGenerator());
     countRooms++;
@@ -222,3 +200,5 @@ ws.on('connection', (socket, req) => {
 
   countConnections++;
 });
+
+keepConnectionsAlive(); // fix heroku router 55sec limit
