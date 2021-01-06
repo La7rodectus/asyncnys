@@ -11,3 +11,6 @@ This simple and convenient extension for google chrome browser will help you to 
 1. Go to the site where you are going to watch the video.
 2. In the extension window, enter the nickname and name of the room.
 3. Click -> *connect*.
+
+## License
+MIT © [La7rodectus](https://github.com/La7rodectus)
