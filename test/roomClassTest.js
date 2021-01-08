@@ -1,9 +1,11 @@
 'use strict';
-/* eslint-disable no-undef */
 
 const assert = require('assert').strict;
 const roomTestData = require('./testsData/roomTestsData');
 const Room = require('../room_class.js');
+const mocha = require('mocha');
+const describe = mocha.describe;
+const it = mocha.it;
 
 describe('Room class test', () => {
   it('Test rooom creation', () => {

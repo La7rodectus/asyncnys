@@ -1,9 +1,11 @@
 'use strict';
-/* eslint-disable no-undef */
 
 const assert = require('assert').strict;
 const userTestData = require('./testsData/userTestsData');
 const User = require('../user_class.js');
+const mocha = require('mocha');
+const describe = mocha.describe;
+const it = mocha.it;
 
 describe('User class test', () => {
   it('Test user creation', () => {

@@ -21,7 +21,7 @@
   },
   "background": {
     "persistent": true,
-    "scripts": ["./src/html/background.html"]
+    "scripts": ["./src/scr/background.js"]
   },
   "permissions": ["<all_urls>", "tabs", "storage", "notifications"]
 }

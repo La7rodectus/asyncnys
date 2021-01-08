@@ -116,6 +116,10 @@ function disconnect(socket, user) {
       countRooms--;
     }
   });
+  socket.send(JSON.stringify({
+    message: 'successfully disconnected',
+    user,
+  }));
   socket.close();
   console.log('rooms stats after disconnection');
   console.log(users);
@@ -155,7 +159,6 @@ function conectUserToRoom(socket, data) {
   let room = rooms.find(item => item.name === data.user.room);
   const uid = data.user.uid;
   const user = users.find(user => user.uid === uid);
-  console.log(user);
   if (room) {
     user.setName(data.user.name);
     room.addUser(socket, user.name);
@@ -185,6 +188,11 @@ function conectUserToRoom(socket, data) {
     list: room.getUsersNames(),
   };
   broadcast(socket, room, room.event, true);
+  socket.send(JSON.stringify({
+    message: 'successfully connected',
+    user,
+  }));
+  console.log(user);
   console.log(rooms);
   console.log(room);
   if (debug) console.log(`connected to room: ${countConnections} ${JSON.stringify(data)}`);
