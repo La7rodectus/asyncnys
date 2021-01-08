@@ -1,6 +1,6 @@
 'use strict';
 
-class Room {
+module.exports = class Room {
   constructor(name, roomID) {
     this.name = name;
     this.event = undefined;
@@ -32,14 +32,18 @@ class Room {
   }
 
   disconnectUser(name) {
-    console.log(`room ${this.name}: ${this.getUser(name).name} disconnected`);
     const userIndex = this.users.findIndex(item => item.name === name);
-    this.users.splice(userIndex, 1);
-    this.usersLength--;
+    if (userIndex !== -1) {
+      console.log(`room ${this.name}: ${this.getUser(name).name} disconnected`);
+      this.users.splice(userIndex, 1);
+      this.usersLength--;
+      return true;
+    } else return false;
   }
 
   getUser(name) {
-    return this.users.find(item => item.name === name);
+    const user = this.users.find(item => item.name === name);
+    if (user) return user; else return false;
   }
 
   getUsersNames() {
@@ -57,6 +61,5 @@ class Room {
     return this.roomID;
   }
 
-}
+};
 
-module.exports = Room;
