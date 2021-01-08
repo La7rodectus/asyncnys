@@ -18,17 +18,24 @@ body {
   padding: 2px;
 }
 
+a {
+  color: rgb(0, 187, 78);
+}
+
+a:visited {
+  color: rgb(0, 187, 78);
+}
+
+a:hover {
+  color: red;
+}
+
 .block,
 li {
   width: 230px;
   height: 25px;
   margin: 0 auto 3px auto;
   display: block;
-}
-
-#usersListTitle {
-  display: none;
-  height: 20px;
 }
 
 li {

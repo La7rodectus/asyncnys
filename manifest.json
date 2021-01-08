@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "asyncnys",
-  "version": "0.0.2",
+  "version": "0.3.1",
   "description": "Sync videos",
   "icons": {
     "128": "./ico/icon_16.png"

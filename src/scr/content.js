@@ -14,6 +14,7 @@ const user = {
 //vars
 let status = 'disconnected';
 let userslist = [];
+let sharedSiteURL = undefined;
 let socket = undefined;
 let videoToSync = null;
 
@@ -26,6 +27,34 @@ function sendRuntimeMessage(msg, data = null) {
     if (debug) console.error('can\'t sendRuntimeMessage');
   }
 }
+
+function promisifySocketMSG(message, data, awaitMsgType, timeout = 1000) {
+  return new Promise((resolve, reject) => {
+    let timer = undefined;
+    socket.send(JSON.stringify({
+      from: 'content.js',
+      message,
+      data,
+    }));
+
+    function responseHandler(msg) {
+      const parsedMSG = JSON.parse(msg.data);
+      if (parsedMSG.message === awaitMsgType) {
+        const result = parsedMSG;
+        resolve(result);
+        clearTimeout(timer);
+      }
+    }
+
+    socket.addEventListener('message', responseHandler);
+
+    timer = setTimeout(() => {
+      reject(new Error('socket response timeout'));
+      socket.removeEventListener('message', responseHandler);
+    }, timeout);
+  });
+}
+
 
 function findInFramesSelector(selector, doc) {
   try {
@@ -57,11 +86,11 @@ function sendStatusToPopup(newStatus) {
   sendRuntimeMessage('status', status);
 }
 
-function sendShareToPopup(data) {
+function sendShareToPopup(shareURL) {
   if (status === 'connected') {
-    if (data !== undefined) {
-      sendRuntimeMessage('share', data);
-      console.log(data);
+    if (shareURL !== undefined) {
+      sendRuntimeMessage('share', { shareURL });
+      console.log(shareURL);
     }
 
   }
@@ -72,7 +101,7 @@ function sendUsersListToPopup() {
 }
 
 function updatePopupData() {
-  sendShareToPopup({ url: document.location.href });
+  sendShareToPopup(sharedSiteURL);
   sendStatusToPopup(status);
   sendUserToPopup();
   sendUsersListToPopup();
@@ -81,7 +110,7 @@ function updatePopupData() {
 //Runtime Event Switches
 function runtimeMSGSwitch(request) {
   const message = request.message;
-  console.log('runtimeMSGSwitch:');
+  console.log('content.js runtimeMSGSwitch:');
   console.log(request);
   switch (message) {
     //background.js
@@ -94,8 +123,7 @@ function runtimeMSGSwitch(request) {
       break;
     }
     case 'share': {
-      sendRuntimeMessage('share', { url: document.location.href });
-      sendShareToPopup({ url: document.location.href });
+      sendShareToPopup(sharedSiteURL);
       break;
     }
     case 'disconnect': {
@@ -108,13 +136,14 @@ function runtimeMSGSwitch(request) {
       break;
     //warn
     default:
-      console.warn(message);
+      console.log('No handler for runtime massage: ' + message);
       break;
   }
 }
 
 //video observer
 function onPlaying(event) {
+  if (!socket) return;
   if (videoToSync.readyState === 4 && videoToSync.play) {
     console.log('onPlaying');
     console.log(event);
@@ -124,13 +153,14 @@ function onPlaying(event) {
       eventType: 'play',
       videoTime: videoToSync.currentTime,
     });
-    if (socket.readyState === socket.OPEN && user.room && socket) {
+    if (socket.readyState === socket.OPEN && user.room) {
       socket.send(message);
     }
   }
 }
 
 function onPause(event) {
+  if (!socket) return;
   if (videoToSync.readyState === 4 && videoToSync.pause) {
     console.log('onPause');
     console.log(event);
@@ -140,7 +170,7 @@ function onPause(event) {
       eventType: 'pause',
       videoTime: videoToSync.currentTime,
     });
-    if (socket.readyState === socket.OPEN && user.room && socket) {
+    if (socket.readyState === socket.OPEN && user.room) {
       socket.send(message);
     }
   }
@@ -148,6 +178,7 @@ function onPause(event) {
 }
 
 function onSeeked(event) {
+  if (!socket) return;
   if (videoToSync.readyState === 4 && !videoToSync.seeked) {
     console.log('onSeeked');
     console.log(event);
@@ -157,7 +188,7 @@ function onSeeked(event) {
       eventType: 'seeked',
       videoTime: videoToSync.currentTime,
     });
-    if (socket.readyState === socket.OPEN && user.room && socket) {
+    if (socket.readyState === socket.OPEN && user.room) {
       socket.send(message);
     }
   }
@@ -191,25 +222,40 @@ function initVideoObserver(obsEventsConfig) {
 
 //WebSocket
 //WebSocket events
-function conectUserToRoom(data) {
+function conectUserToRoom(popupdata) {
   socket = new WebSocket('wss://asyncnyshook.herokuapp.com/');
   //socket = new WebSocket('ws://127.0.0.1:8000/');
   //video observer init
   initVideoObserver(obsEventsConfig);
 
   socket.onopen = () => {
-    user.name = data.name;
-    user.room = data.room;
-    data.videoTime = videoToSync.currentTime;
+    user.name = popupdata.name;
+    user.room = popupdata.room;
+    sharedSiteURL = document.location.href;
     status = 'connected';
-    socket.send(JSON.stringify({
-      from: 'popup',
-      message: 'conectToRoom',
-      data
-    }));
     console.log('connected');
+    promisifySocketMSG('waiting fo uid', null, 'uid')
+      .then(resolve => {
+        const client = {
+          name: popupdata.name,
+          room: popupdata.room,
+          uid: resolve.uid,
+        };
+        const data = {
+          'user': client,
+          sharedSiteURL,
+          'videoTime': videoToSync.currentTime,
+        };
+        console.log(data);
+        socket.send(JSON.stringify({
+          from: 'popup',
+          message: 'conectToRoom',
+          data,
+        }));
+      });
 
     socket.onclose = () => {
+      disconnect();
       console.log('closed');
     };
     socket.onmessage = event => {
@@ -237,6 +283,10 @@ function firebroadcast(event) {
     case 'play':
       if (videoToSync.readyState === 4) videoToSync.play();
       break;
+    case 'share':
+      sharedSiteURL = event.shareURL;
+      sendShareToPopup(event.shareURL);
+      break;
     case 'seeked':
       fireSeeked(event);
       break;
@@ -251,8 +301,6 @@ function firebroadcast(event) {
 }
 
 function disconnect() {
-  status = 'disconnected';
-  userslist = [];
   if (socket) {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
@@ -262,6 +310,9 @@ function disconnect() {
       }));
     }
   }
+  status = 'disconnected';
+  userslist = [];
+  sharedSiteURL = undefined;
   user.room = null;
   socket = undefined;
   videoToSync = undefined;
@@ -278,13 +329,16 @@ function socketMSGSwitch(message) {
       firebroadcast(parsedMSG.event);
       break;
     case 'ping':
-      socket.send({ 'message': 'pong' });
+      socket.send(JSON.stringify({ 'message': 'pong' }));
       break;
     case 'uid':
-      user.uid = parsedMSG.uID;
+      user.uid = parsedMSG.uid;
+      break;
+    case 'error':
+      sendRuntimeMessage('error', parsedMSG.error);
       break;
     default:
-      console.warn(message);
+      console.log('No handler for socket massage: ' + message);
       break;
   }
 }

@@ -2,9 +2,14 @@
 
 class User {
   constructor(uid, socket) {
-    this.uID = uid;
+    this.uid = uid;
     this.soket = socket;
+    this.name = undefined;
     this.room = null;
+  }
+
+  setName(name) {
+    this.name = name;
   }
 
   setRoom(roomName) {

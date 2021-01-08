@@ -29,7 +29,7 @@ const usedID = [];
 
 ///////// util
 function printServStats() {
-  console.log(' connections - ' + countConnections + '\n rooms - ' + rooms + '\n roomsID - ' + roomsID + '\n usedID - ' + usedID);
+  console.log(' connections - ' + countConnections + '\n rooms - ' + rooms.length/* + '\n roomsID - ' + roomsID + '\n usedID - ' + usedID*/);
 }
 
 if (debug) setInterval(() => {
@@ -49,6 +49,23 @@ function iDGenerator() {
       return uID;
     }
   }
+}
+
+function isUsernameAvailable(UserName) {
+  const allUsernames = [];
+  for (const user of users) {
+    if (user.name) allUsernames.push(user.name);
+  }
+  if (allUsernames.includes(UserName)) return false;
+  return true;
+}
+
+function throwError(socket, error) {
+  const err = JSON.stringify({
+    'message': 'error',
+    error,
+  });
+  socket.send(err);
 }
 
 // fix heroku router 55sec limit
@@ -74,6 +91,7 @@ function broadcast(socket, room, event, selfCast = false) {
 }
 
 function getRoomByUser(user) {
+  console.log(user);
   for (const room of rooms) {
     const roomUsers = room.getUsers();
     for (const RoomUser of roomUsers) {
@@ -86,7 +104,7 @@ function getRoomByUser(user) {
 
 //socket events
 function disconnect(socket, user) {
-  const userIndex = users.findIndex(item => item.uID === user.uid);
+  const userIndex = users.findIndex(item => item.uid === user.uid);
   const uidIndex = usedID.findIndex(item => item === user.uid);
   users.splice(userIndex, 1);
   usedID.splice(uidIndex, 1);
@@ -99,12 +117,14 @@ function disconnect(socket, user) {
     }
   });
   socket.close();
-  console.log('rooms stats');
+  console.log('rooms stats after disconnection');
   console.log(users);
   console.dir(rooms);
 }
 
 function disconnectFromRoom(socket, user) {
+  console.log(rooms);
+  console.log(users);
   const room = getRoomByUser(user);
   room.disconnectUser(user.name);
   const event = {
@@ -122,28 +142,43 @@ function disconnectFromRoom(socket, user) {
       countRooms--;
     }
   });
-  console.log('rooms stats');
-  console.dir(rooms);
-  console.dir(roomsID);
 }
 
 function conectUserToRoom(socket, data) {
-  if (debug) console.log('socket: conectToRoom');
-  let room = rooms.find(item => item.name === data.room);
+  console.log('socket: conectToRoom');
+  console.log(data);
+  if (!isUsernameAvailable(data.user.name)) {
+    throwError(socket, 'This username (' + data.user.name + ') already exists');
+    disconnect(socket, data.user);
+    return;
+  }
+  let room = rooms.find(item => item.name === data.user.room);
+  const uid = data.user.uid;
+  const user = users.find(user => user.uid === uid);
+  console.log(user);
   if (room) {
-    room.addUser(socket, data.name);
+    user.setName(data.user.name);
+    room.addUser(socket, user.name);
     room.event = {
       'type': 'pause',
       videoTime: data.videoTime,
     };
     broadcast(socket, room, room.event, true);
   } else {
-    room = new Room(data.room, iDGenerator());
+    user.setName(data.user.name);
+    user.setRoom(data.user.room);
+    room = new Room(user.room, iDGenerator());
+    room.shareURL = data.sharedSiteURL;
     countRooms++;
-    room.addUser(socket, data.name);
+    room.addUser(socket, user.name);
     rooms.push(room);
     roomsID[room.roomID] = room;
   }
+  const shareEvent = {
+    'type': 'share',
+    shareURL: room.shareURL,
+  };
+  broadcast(socket, room, shareEvent, true);
   room.event = {
     'type': 'usersList',
     videoTime: data.videoTime,
@@ -173,7 +208,7 @@ function serverSocketEventsSwitch(socket, message) {
       console.error(parsedMSG);
       break;
     default:
-      console.log(message);
+      console.log('No socket event handler for: ' + message);
       break;
   }
 }
@@ -183,9 +218,10 @@ ws.on('connection', (socket, req) => {
   const ip = req.socket.remoteAddress;
   if (debug) console.log(`Connected ${ip}, ${req.url}`);
 
-  const uID = iDGenerator();
-  users.push(new User(uID, socket));
-  const message = JSON.stringify({ 'message': 'uid', uID });
+
+  const uid = iDGenerator();
+  users.push(new User(uid, socket));
+  const message = JSON.stringify({ 'message': 'uid', uid });
   socket.send(message);
 
   socket.on('message', message => {

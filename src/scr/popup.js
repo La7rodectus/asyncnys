@@ -7,16 +7,14 @@ const roomField = document.getElementById('room');
 const nameField = document.getElementById('name');
 const connectBtn = document.getElementById('connect');
 const shareBtn = document.getElementById('share');
-const sharedText = document.getElementById('shared');
-const usersListTitle = document.getElementById('usersListTitle');
+const sharedLink = document.getElementById('shared');
 const usersList = document.getElementById('usersList');
 const statusBar = document.getElementById('status');
 const errorElem = document.getElementById('error');
 
 //library
 function displayElem(display) {
-  sharedText.style.display = display;
-  usersListTitle.style.display = display;
+  sharedLink.style.display = display;
   usersList.style.display = display;
   shareBtn.style.display = display;
 }
@@ -33,12 +31,19 @@ function sendMessageToActiveTab(msg, data = null) {
   }
 }
 
+function showError(error) {
+  errorElem.style.display = 'block';
+  setTimeout(() => errorElem.style.display = 'none', 2000);
+  errorElem.innerText = error;
+}
+
 function getFaviconFromUrl(url) {
   let position = 0;
   for (let i = 0; i < 3; i++) {
     position = url.indexOf('/', position);
     position++;
   }
+  return `${url.substring(0, position)}favicon.ico`;
 }
 
 function sendRuntimeMessage(msg, data = null) {
@@ -67,10 +72,7 @@ function connectBtnAction() {
     const data = { name: nameField.value, room: roomField.value };
     sendMessageToActiveTab('connect_user_to_room', data);
   } else {
-    errorElem.style.display = 'block';
-    sendMessageToActiveTab('error', isRoomAndNameCorrect());
-    setTimeout(() => errorElem.style.display = 'none', 2000);
-    errorElem.innerText = isRoomAndNameCorrect();
+    showError(isRoomAndNameCorrect());
   }
   updatePopup();
 }
@@ -83,7 +85,6 @@ function onStatus(status) {
     connectBtn.value = 'disconnect';
     connectBtn.onclick = () => sendMessageToActiveTab('disconnect');
     displayElem('block');
-    sharedText.value = 'sharedText';
   } else {
     nameField.readOnly = false;
     roomField.readOnly = false;
@@ -95,18 +96,17 @@ function onStatus(status) {
 }
 
 function onShare(data) {
-  console.log(data);
-  if (data !== null) {
-    shareBtn.href = data.url;
-    shareBtn.innerText = 'sdsda';
+  if (data) {
+    sharedLink.href = data.shareURL;
+    sharedLink.innerText = '';
     const img = document.createElement('img');
     const span = document.createElement('span');
+    sharedLink.appendChild(img);
+    sharedLink.appendChild(span);
     img.style.height = '16px';
-    img.src = getFaviconFromUrl(data.url);
-    span.innerText = 'sdsda';//data.title;
-    shareBtn.appendChild(img);
-    shareBtn.appendChild(span);
-    shareBtn.style.display = 'block';
+    img.src = getFaviconFromUrl(data.shareURL);
+    span.innerText = data.shareURL;//data.title
+    sharedLink.style.display = 'block';
   }
 }
 
@@ -128,7 +128,7 @@ function onSendUser(data) {
 //Runtime Event Switches
 function runtimeMSGSwitch(request) {
   const message = request.message;
-  console.log('runtimeMSGSwitch: request');
+  console.log('popup.js runtimeMSGSwitch: ' + message);
   switch (message) {
     //content.js
     case 'status':
@@ -143,14 +143,11 @@ function runtimeMSGSwitch(request) {
     case 'sendUser':
       onSendUser(request.data);
       break;
-    case 'debug_log':
-      console.log(request.data);
-      break;
     case 'error':
-      console.error(request);
+      showError(request.data);
       break;
     default:
-      console.warn(message);
+      console.warn('No handler for runtime message: ' + message);
       break;
   }
 }
@@ -159,13 +156,13 @@ function runtimeMSGSwitch(request) {
 //buttons handler
 shareBtn.onclick = () => sendMessageToActiveTab('share');
 connectBtn.onclick = () => connectBtnAction();
+//sharedLink.onclick = () => sendRuntimeMessage('sharedLinkClicked', );
 
 //listeners
 chrome.runtime.onMessage.addListener(request => {
   runtimeMSGSwitch(request);
 });
 
-window.onload = () => {
-  updatePopup();
-};
+window.onload = () => updatePopup();
+
 

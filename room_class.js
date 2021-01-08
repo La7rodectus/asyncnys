@@ -7,7 +7,7 @@ class Room {
     this.roomTime = 0;
     this.users = [];
     this.usersLength = 0;
-    this.share = null;
+    this.shareURL = undefined;
     this.roomID = roomID;
   }
 
@@ -32,14 +32,14 @@ class Room {
   }
 
   disconnectUser(name) {
-    console.log(`room ${this.name}: ${this.getUser(name)} disconnected`);
+    console.log(`room ${this.name}: ${this.getUser(name).name} disconnected`);
     const userIndex = this.users.findIndex(item => item.name === name);
     this.users.splice(userIndex, 1);
     this.usersLength--;
   }
 
   getUser(name) {
-    return this.users.find(item => item.name === name).name;
+    return this.users.find(item => item.name === name);
   }
 
   getUsersNames() {

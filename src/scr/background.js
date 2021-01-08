@@ -35,6 +35,7 @@ function openNewTab(url) {
 //Event Switches
 function runtimeMSGSwitch(request) {
   const message = request.message;
+  console.log(request);
   switch (message) {
     //from popup.js
     case 'test_f':
