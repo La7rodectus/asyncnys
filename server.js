@@ -152,8 +152,10 @@ function removeUID(uid) {
   return false;
 }
 
-function conectUserToRoom(socket, data) {
+//socket events handlers
+function conectUserToRoom(socket, parsedMSG) {
   console.log('socket: conectToRoom');
+  const data = parsedMSG.data;
   if (!isUsernameAvailable(data.user.name)) {
     throwError(socket, 'This username (' + data.user.name + ') already exists');
     removeUID(data.user.uid);
@@ -202,27 +204,32 @@ function conectUserToRoom(socket, data) {
   if (debug) console.log(`connected to room: conn - ${countConnections} data -  ${JSON.stringify(data)}`);
 }
 
-//socket events switch
-function serverSocketEventsSwitch(socket, message) {
+function onDisconnectSocketEvent(socket, parsedMSG) {
+  disconnectFromRoom(socket, parsedMSG.user);
+  disconnect(socket, parsedMSG.user);
+}
+
+function onBroadcastSocketEvent(socket, parsedMSG) {
+  broadcast(socket, getRoomByUser(parsedMSG.user), { 'type': parsedMSG.eventType, 'videoTime': parsedMSG.videoTime });
+}
+
+//socket event config
+const socketEventConfig = {
+  'conectToRoom': conectUserToRoom,
+  'disconnect': onDisconnectSocketEvent,
+  'broadcast': onBroadcastSocketEvent,
+};
+
+//socket event Handler
+function socketEventHandler(socket, message) {
   const parsedMSG = JSON.parse(message);
-  switch (parsedMSG.message) {
-    case 'conectToRoom':
-      conectUserToRoom(socket, parsedMSG.data);
-      break;
-    case 'disconnect':
-      disconnectFromRoom(socket, parsedMSG.user);
-      disconnect(socket, parsedMSG.user);
-      break;
-    case 'broadcast':
-      broadcast(socket, getRoomByUser(parsedMSG.user), { 'type': parsedMSG.eventType, 'videoTime': parsedMSG.videoTime });
-      break;
-    case 'error':
-      console.error(parsedMSG);
-      break;
-    default:
-      console.log('No socket event handler for: ' + message);
-      break;
+  console.log('Received: ' + message);
+  const eventHandler = socketEventConfig[parsedMSG.message];
+  if (!eventHandler) {
+    console.log('No socket event handler for: ' + message);
+    return;
   }
+  eventHandler(socket, parsedMSG);
 }
 
 //WebSocket
@@ -236,8 +243,8 @@ ws.on('connection', (socket, req) => {
   socket.send(message);
 
   socket.on('message', message => {
-    console.log('Received: ' + message);
-    serverSocketEventsSwitch(socket, message);
+    socketEventHandler(socket, message);
+    //serverSocketEventsSwitch(socket, message);
   });
 
   socket.on('close', () => {
