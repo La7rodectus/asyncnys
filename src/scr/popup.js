@@ -46,15 +46,6 @@ function getFaviconFromUrl(url) {
   return `${url.substring(0, position)}favicon.ico`;
 }
 
-function sendRuntimeMessage(msg, data = null) {
-  try {
-    const message = { 'message': msg, data };
-    chrome.runtime.sendMessage(message);
-  } catch (err) {
-    if (debug) console.error('can\'t sendRuntimeMessage');
-  }
-}
-
 function isRoomAndNameCorrect() {
   if (nameField.value === '' || nameField.value === undefined) return 'incorrect_write_name';
   if (nameField.value.length < 2 || nameField.value.length > 24) return 'incorrect_name_length';

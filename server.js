@@ -21,7 +21,6 @@ const ws = new WebSocket.Server({ server });
 
 //storage
 let countConnections = 0;
-let countRooms = 0;
 const rooms = [];
 const roomsID = [];
 const users = [];
@@ -29,7 +28,7 @@ const usedID = [];
 
 ///////// util
 function printServStats() {
-  console.log(' connections - ' + countConnections + '\n rooms - ' + rooms.length/* + '\n roomsID - ' + roomsID + '\n usedID - ' + usedID*/);
+  console.log(' connections - ' + countConnections + '\n rooms - ' + rooms.length);
 }
 
 if (debug) setInterval(() => {
@@ -113,17 +112,16 @@ function disconnect(socket, user) {
     if (room.nullUsers()) {
       delete roomsID[room.getRoomID];
       rooms.splice(i, 1);
-      countRooms--;
     }
   });
   socket.send(JSON.stringify({
     message: 'successfully disconnected',
-    user,
+    username: user.name,
   }));
   socket.close();
-  console.log('rooms stats after disconnection');
-  console.log(users);
-  console.dir(rooms);
+  //console.log('rooms stats after disconnection');
+  //console.log(users);
+  //console.dir(rooms);
 }
 
 function disconnectFromRoom(socket, user) {
@@ -143,7 +141,6 @@ function disconnectFromRoom(socket, user) {
       const roomIDIndex = usedID.findIndex(item => item === room.getRoomID());
       usedID.splice(roomIDIndex, 1);
       rooms.splice(i, 1);
-      countRooms--;
     }
   });
 }
@@ -156,8 +153,9 @@ function conectUserToRoom(socket, data) {
     disconnect(socket, data.user);
     return;
   }
-  let room = rooms.find(item => item.name === data.user.room);
   const uid = data.user.uid;
+  users.push(new User(uid, socket));
+  let room = rooms.find(item => item.name === data.user.room);
   const user = users.find(user => user.uid === uid);
   if (room) {
     user.setName(data.user.name);
@@ -172,7 +170,6 @@ function conectUserToRoom(socket, data) {
     user.setRoom(data.user.room);
     room = new Room(user.room, iDGenerator());
     room.shareURL = data.sharedSiteURL;
-    countRooms++;
     room.addUser(socket, user.name);
     rooms.push(room);
     roomsID[room.roomID] = room;
@@ -190,12 +187,12 @@ function conectUserToRoom(socket, data) {
   broadcast(socket, room, room.event, true);
   socket.send(JSON.stringify({
     message: 'successfully connected',
-    user,
+    username: user.name,
   }));
-  console.log(user);
-  console.log(rooms);
-  console.log(room);
-  if (debug) console.log(`connected to room: ${countConnections} ${JSON.stringify(data)}`);
+  //console.log(user);
+  //console.log(rooms);
+  //console.log(room);
+  if (debug) console.log(`connected to room: conn - ${countConnections} data -  ${JSON.stringify(data)}`);
 }
 
 //socket events switch
@@ -228,7 +225,6 @@ ws.on('connection', (socket, req) => {
 
 
   const uid = iDGenerator();
-  users.push(new User(uid, socket));
   const message = JSON.stringify({ 'message': 'uid', uid });
   socket.send(message);
 
@@ -238,11 +234,14 @@ ws.on('connection', (socket, req) => {
   });
 
   socket.on('close', () => {
+    ws.clients.delete(socket);
     console.log(`disconnected ${ip}`);
-
   });
 
   countConnections++;
 });
 
 keepConnectionsAlive(); // fix heroku router 55sec limit
+
+//exports
+
