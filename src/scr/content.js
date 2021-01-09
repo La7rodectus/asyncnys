@@ -18,7 +18,7 @@ let sharedSiteURL = undefined;
 let socket = undefined;
 let videoToSync = null;
 
-// library
+//library
 function sendRuntimeMessage(msg, data = null) {
   try {
     const message = { 'message': msg, data };
@@ -54,7 +54,6 @@ function promisifySocketMSG(message, data, awaitMsgType, timeout = 1000) {
     }, timeout);
   });
 }
-
 
 function findInFramesSelector(selector, doc) {
   try {
@@ -107,6 +106,7 @@ function updatePopupData() {
   sendUsersListToPopup();
 }
 
+//runtime events config
 const runtimeEventsConfig = {
   'connect_user_to_room': conectUserToRoom,
   'updatePopup': updatePopupData,
@@ -115,6 +115,7 @@ const runtimeEventsConfig = {
   'error': err => console.error(err),
 };
 
+//runtime events handler
 function runtimeEventsHandler(event) {
   console.log(event);
   const eventHandler = runtimeEventsConfig[event.message];
@@ -124,7 +125,6 @@ function runtimeEventsHandler(event) {
   }
   event.data ? eventHandler(event.data) : eventHandler();
 }
-
 
 //video observer
 function onPlaying(event) {
@@ -205,8 +205,8 @@ function initVideoObserver(obsEventsConfig) {
 
 }
 
-//WebSocket
-//WebSocket events
+
+//WebSocket handlers
 function conectUserToRoom(popupdata) {
   //socket = new WebSocket('wss://asyncnyshook.herokuapp.com/');
   socket = new WebSocket('ws://127.0.0.1:8000/');
@@ -220,6 +220,7 @@ function conectUserToRoom(popupdata) {
     console.log('connected');
     promisifySocketMSG('waiting fo uid', null, 'uid')
       .then(resolve => {
+        user.uid = resolve.uid;
         const client = {
           name: popupdata.name,
           room: popupdata.room,
@@ -249,6 +250,7 @@ function conectUserToRoom(popupdata) {
   };
 }
 
+//fire events handlers
 function fireSeeked(event) {
   const MAXVIDEOTIMEDEFF = 0.5;
   videoToSync.pause();
@@ -258,30 +260,42 @@ function fireSeeked(event) {
   }
 }
 
-function firebroadcast(event) {
+function firePause(event) {
+  if (videoToSync.readyState === 4) videoToSync.pause();
+}
+
+function firePlay(event) {
+  if (videoToSync.readyState === 4) videoToSync.play();
+}
+
+function fireShare(event) {
+  sharedSiteURL = event.shareURL;
+  sendShareToPopup(event.shareURL);
+}
+
+function fireUsersList(event) {
+  userslist = event.list;
+  sendUsersListToPopup();
+}
+
+//fire events handlers config
+const broadcastEventsConfig = {
+  'pause': firePause,
+  'play': firePlay,
+  'share': fireShare,
+  'seeked': fireSeeked,
+  'usersList': fireUsersList,
+};
+
+//fire broadcast handler
+function fireBroadcastEventsHandler(event) {
   console.log(event, videoToSync.currentTime);
-  switch (event.type) {
-    case 'pause':
-      if (videoToSync.readyState === 4) videoToSync.pause();
-      break;
-    case 'play':
-      if (videoToSync.readyState === 4) videoToSync.play();
-      break;
-    case 'share':
-      sharedSiteURL = event.shareURL;
-      sendShareToPopup(event.shareURL);
-      break;
-    case 'seeked':
-      fireSeeked(event);
-      break;
-    case 'usersList':
-      userslist = event.list;
-      sendUsersListToPopup();
-      break;
-    default:
-      console.warn('can\'t find event to fire');
-      break;
+  const eventHandler = broadcastEventsConfig[event.type];
+  if (!eventHandler) {
+    console.log('no eventHandler to fire event: ' + JSON.stringify(event));
+    return;
   }
+  eventHandler(event);
 }
 
 function disconnect() {
@@ -310,7 +324,8 @@ function socketMSGSwitch(message) {
   console.log(parsedMSG);
   switch (parsedMSG.message) {
     case 'broadcast':
-      firebroadcast(parsedMSG.event);
+      fireBroadcastEventsHandler(parsedMSG.event);
+      //firebroadcast(parsedMSG.event);
       break;
     case 'ping':
       socket.send(JSON.stringify({ 'message': 'pong' }));

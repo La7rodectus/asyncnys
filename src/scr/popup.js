@@ -125,7 +125,12 @@ const runtimeEventsConfig = {
 };
 
 function runtimeEventsHandler(event) {
-  runtimeEventsConfig[event.message](event.data);
+  const eventHandler = runtimeEventsConfig[event.message];
+  if (!eventHandler) {
+    sendMessageToActiveTab('error', 'no runtime handler for: ' + event);
+    return;
+  }
+  eventHandler(event.data);
 }
 
 //buttons handler
