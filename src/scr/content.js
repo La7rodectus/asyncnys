@@ -205,7 +205,6 @@ function initVideoObserver(obsEventsConfig) {
 
 }
 
-
 //WebSocket handlers
 function conectUserToRoom(popupdata) {
   //socket = new WebSocket('wss://asyncnyshook.herokuapp.com/');
@@ -243,11 +242,28 @@ function conectUserToRoom(popupdata) {
       disconnect();
       console.log('closed');
     };
-    socket.onmessage = event => {
-      socketMSGSwitch(event.data);
-    };
+    socket.onmessage = message => socketMsgHandler(message.data);
     updatePopupData();
   };
+}
+
+function disconnect() {
+  if (socket) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        from: 'popup',
+        message: 'disconnect',
+        user
+      }));
+    }
+  }
+  status = 'disconnected';
+  userslist = [];
+  sharedSiteURL = undefined;
+  user.room = null;
+  socket = undefined;
+  videoToSync = undefined;
+  updatePopupData();
 }
 
 //fire events handlers
@@ -260,11 +276,11 @@ function fireSeeked(event) {
   }
 }
 
-function firePause(event) {
+function firePause() {
   if (videoToSync.readyState === 4) videoToSync.pause();
 }
 
-function firePlay(event) {
+function firePlay() {
   if (videoToSync.readyState === 4) videoToSync.play();
 }
 
@@ -288,7 +304,8 @@ const broadcastEventsConfig = {
 };
 
 //fire broadcast handler
-function fireBroadcastEventsHandler(event) {
+function fireBroadcastEventsHandler(parsedMSG) {
+  const event = parsedMSG.event;
   console.log(event, videoToSync.currentTime);
   const eventHandler = broadcastEventsConfig[event.type];
   if (!eventHandler) {
@@ -298,48 +315,29 @@ function fireBroadcastEventsHandler(event) {
   eventHandler(event);
 }
 
-function disconnect() {
-  if (socket) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
-        from: 'popup',
-        message: 'disconnect',
-        user
-      }));
-    }
-  }
-  status = 'disconnected';
-  userslist = [];
-  sharedSiteURL = undefined;
-  user.room = null;
-  socket = undefined;
-  videoToSync = undefined;
-  updatePopupData();
+//socketMsgHandlers
+function pInGpOng() {
+  socket.send(JSON.stringify({ 'message': 'pong' }));
 }
 
-//WS event Switches
-function socketMSGSwitch(message) {
+//socketMsgHandlersConfig
+const socketMsgHandlersConfig = {
+  'broadcast': fireBroadcastEventsHandler,
+  'ping': pInGpOng,
+  'error': parsedMSG => sendRuntimeMessage('error', parsedMSG.error),
+};
+
+//socketMsgHandler
+function socketMsgHandler(message) {
   const parsedMSG = JSON.parse(message);
   console.log('socketMSGSwitch:');
   console.log(parsedMSG);
-  switch (parsedMSG.message) {
-    case 'broadcast':
-      fireBroadcastEventsHandler(parsedMSG.event);
-      //firebroadcast(parsedMSG.event);
-      break;
-    case 'ping':
-      socket.send(JSON.stringify({ 'message': 'pong' }));
-      break;
-    case 'uid':
-      user.uid = parsedMSG.uid;
-      break;
-    case 'error':
-      sendRuntimeMessage('error', parsedMSG.error);
-      break;
-    default:
-      console.log('No handler for socket massage: ' + message);
-      break;
+  const msgHandler = socketMsgHandlersConfig[parsedMSG.message];
+  if (!msgHandler) {
+    console.log('No handler for socket massage: ' + message);
+    return;
   }
+  msgHandler(parsedMSG);
 }
 
 //Listeners
