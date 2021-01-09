@@ -86,11 +86,11 @@ function sendStatusToPopup(newStatus) {
   sendRuntimeMessage('status', status);
 }
 
-function sendShareToPopup(shareURL) {
+function sendShareToPopup() {
   if (status === 'connected') {
-    if (shareURL !== undefined) {
-      sendRuntimeMessage('share', { shareURL });
-      console.log(shareURL);
+    if (sharedSiteURL !== undefined) {
+      sendRuntimeMessage('share', { sharedSiteURL });
+      console.log(sharedSiteURL);
     }
 
   }
@@ -101,45 +101,30 @@ function sendUsersListToPopup() {
 }
 
 function updatePopupData() {
-  sendShareToPopup(sharedSiteURL);
+  sendShareToPopup();
   sendStatusToPopup(status);
   sendUserToPopup();
   sendUsersListToPopup();
 }
 
-//Runtime Event Switches
-function runtimeMSGSwitch(request) {
-  const message = request.message;
-  console.log('content.js runtimeMSGSwitch:');
-  console.log(request);
-  switch (message) {
-    //background.js
-    case 'connect_user_to_room':
-      conectUserToRoom(request.data);
-      break;
-    //popup.js
-    case 'updatePopup': {
-      updatePopupData();
-      break;
-    }
-    case 'share': {
-      sendShareToPopup(sharedSiteURL);
-      break;
-    }
-    case 'disconnect': {
-      disconnect();
-      break;
-    }
-    //any
-    case 'error':
-      console.error(request);
-      break;
-    //warn
-    default:
-      console.log('No handler for runtime massage: ' + message);
-      break;
+const runtimeEventsConfig = {
+  'connect_user_to_room': conectUserToRoom,
+  'updatePopup': updatePopupData,
+  'share': sendShareToPopup,
+  disconnect,
+  'error': err => console.error(err),
+};
+
+function runtimeEventsHandler(event) {
+  console.log(event);
+  const eventHandler = runtimeEventsConfig[event.message];
+  if (!eventHandler) {
+    console.log('No handler for runtime massage: ' + event.message);
+    return;
   }
+  event.data ? eventHandler(event.data) : eventHandler();
 }
+
 
 //video observer
 function onPlaying(event) {
@@ -227,7 +212,6 @@ function conectUserToRoom(popupdata) {
   socket = new WebSocket('ws://127.0.0.1:8000/');
   //video observer init
   initVideoObserver(obsEventsConfig);
-
   socket.onopen = () => {
     user.name = popupdata.name;
     user.room = popupdata.room;
@@ -344,10 +328,6 @@ function socketMSGSwitch(message) {
 }
 
 //Listeners
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  runtimeMSGSwitch(request);
-});
-
-
+chrome.runtime.onMessage.addListener(event => runtimeEventsHandler(event));
 window.onbeforeunload = () => disconnect();
 

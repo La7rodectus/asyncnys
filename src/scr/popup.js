@@ -88,15 +88,15 @@ function onStatus(status) {
 
 function onShare(data) {
   if (data) {
-    sharedLink.href = data.shareURL;
+    sharedLink.href = data.sharedSiteURL;
     sharedLink.innerText = '';
     const img = document.createElement('img');
     const span = document.createElement('span');
     sharedLink.appendChild(img);
     sharedLink.appendChild(span);
     img.style.height = '16px';
-    img.src = getFaviconFromUrl(data.shareURL);
-    span.innerText = data.shareURL;//data.title
+    img.src = getFaviconFromUrl(data.sharedSiteURL);
+    span.innerText = data.sharedSiteURL;//data.title
     sharedLink.style.display = 'block';
   }
 }
@@ -116,7 +116,7 @@ function onSendUser(data) {
   roomField.value = data.room;
 }
 
-const eventsConfig = {
+const runtimeEventsConfig = {
   'status': onStatus,
   'share': onShare,
   'sendUsersList': onUserList,
@@ -125,7 +125,7 @@ const eventsConfig = {
 };
 
 function runtimeEventsHandler(event) {
-  eventsConfig[event.message](event.data);
+  runtimeEventsConfig[event.message](event.data);
 }
 
 //buttons handler

@@ -28,7 +28,8 @@ const usedID = [];
 
 ///////// util
 function printServStats() {
-  console.log(' connections - ' + countConnections + '\n rooms - ' + rooms.length);
+  console.log(' connections - ' + countConnections + '\n users - ' + users.length + '\n rooms - ' + rooms.length);
+  if (countConnections !== users.length) console.warn('we have extra connections');
 }
 
 if (debug) setInterval(() => {
@@ -107,7 +108,6 @@ function disconnect(socket, user) {
   const uidIndex = usedID.findIndex(item => item === user.uid);
   users.splice(userIndex, 1);
   usedID.splice(uidIndex, 1);
-  countConnections--;
   rooms.forEach((room, i) => {
     if (room.nullUsers()) {
       delete roomsID[room.getRoomID];
@@ -143,11 +143,21 @@ function disconnectFromRoom(socket, user) {
   });
 }
 
+function removeUID(uid) {
+  const uidIndex = usedID.indexOf(uid);
+  if (uidIndex !== -1) {
+    usedID.splice(uidIndex, 1);
+    return true;
+  }
+  return false;
+}
+
 function conectUserToRoom(socket, data) {
   console.log('socket: conectToRoom');
   if (!isUsernameAvailable(data.user.name)) {
     throwError(socket, 'This username (' + data.user.name + ') already exists');
-    disconnect(socket, data.user);
+    removeUID(data.user.uid);
+    socket.close();
     return;
   }
   const uid = data.user.uid;
@@ -231,7 +241,7 @@ ws.on('connection', (socket, req) => {
   });
 
   socket.on('close', () => {
-    ws.clients.delete(socket);
+    countConnections--;
     console.log(`disconnected ${ip}`);
   });
 
