@@ -45,7 +45,6 @@ function runtimeMSGSwitch(request) {
       sendMessageToActiveTab('connect_user_to_room', request.data);
       break;
     case 'error':
-      sendMessageToActiveTab('error', request.data);
       console.error(request.data);
       break;
     //from content.js
@@ -60,9 +59,5 @@ function runtimeMSGSwitch(request) {
 
 //Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  runtimeMSGSwitch(request);
-});
-
-chrome.tabs.onUpdated.addListener((request, sender, sendResponse) => {
   runtimeMSGSwitch(request);
 });

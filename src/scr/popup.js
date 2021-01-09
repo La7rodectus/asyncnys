@@ -57,7 +57,7 @@ function isRoomAndNameCorrect() {
 function updatePopup() {
   sendMessageToActiveTab('updatePopup');
 }
-
+//btn handlers
 function connectBtnAction() {
   if (isRoomAndNameCorrect() === true) {
     const data = { name: nameField.value, room: roomField.value };
@@ -116,33 +116,17 @@ function onSendUser(data) {
   roomField.value = data.room;
 }
 
-//Runtime Event Switches
-function runtimeMSGSwitch(request) {
-  const message = request.message;
-  console.log('popup.js runtimeMSGSwitch: ' + message);
-  switch (message) {
-    //content.js
-    case 'status':
-      onStatus(request.data);
-      break;
-    case 'share':
-      onShare(request.data);
-      break;
-    case 'sendUsersList':
-      onUserList(request.data);
-      break;
-    case 'sendUser':
-      onSendUser(request.data);
-      break;
-    case 'error':
-      showError(request.data);
-      break;
-    default:
-      console.warn('No handler for runtime message: ' + message);
-      break;
-  }
-}
+const eventsConfig = {
+  'status': onStatus,
+  'share': onShare,
+  'sendUsersList': onUserList,
+  'sendUser': onSendUser,
+  'error': showError,
+};
 
+function runtimeEventsHandler(event) {
+  eventsConfig[event.message](event.data);
+}
 
 //buttons handler
 shareBtn.onclick = () => sendMessageToActiveTab('share');
@@ -150,10 +134,7 @@ connectBtn.onclick = () => connectBtnAction();
 //sharedLink.onclick = () => sendRuntimeMessage('sharedLinkClicked', );
 
 //listeners
-chrome.runtime.onMessage.addListener(request => {
-  runtimeMSGSwitch(request);
-});
-
+chrome.runtime.onMessage.addListener(request => runtimeEventsHandler(request));
 window.onload = () => updatePopup();
 
 

@@ -125,8 +125,6 @@ function disconnect(socket, user) {
 }
 
 function disconnectFromRoom(socket, user) {
-  console.log(rooms);
-  console.log(users);
   const room = getRoomByUser(user);
   room.disconnectUser(user.name);
   const event = {
@@ -147,7 +145,6 @@ function disconnectFromRoom(socket, user) {
 
 function conectUserToRoom(socket, data) {
   console.log('socket: conectToRoom');
-  console.log(data);
   if (!isUsernameAvailable(data.user.name)) {
     throwError(socket, 'This username (' + data.user.name + ') already exists');
     disconnect(socket, data.user);
