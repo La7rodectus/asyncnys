@@ -6,6 +6,9 @@ const http = require('http');
 const WebSocket = require('ws');
 const Room = require('./room_class');
 const User = require('./user_class');
+const IDGenerator = require('./iDGenerator_class');
+
+const idGenerator = new IDGenerator();
 
 const PORT = process.env.PORT || 8000;
 
@@ -24,7 +27,7 @@ let countConnections = 0;
 const rooms = [];
 const roomsID = [];
 const users = [];
-const usedID = [];
+//const usedID = [];
 
 ///////// util
 function printServStats() {
@@ -38,7 +41,7 @@ if (debug) setInterval(() => {
 ////////
 
 //func
-function iDGenerator() {
+/*function iDGenerator() {
   const uid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c, r) => ('x' === c ? (r = Math.random() * 16 | 0) : (r & 0x3 | 0x8)).toString(16));
   let alreadyExists = true;
   while (alreadyExists) {
@@ -49,7 +52,7 @@ function iDGenerator() {
       return uID;
     }
   }
-}
+}*/
 
 function isUsernameAvailable(UserName) {
   const allUsernames = [];
@@ -60,7 +63,7 @@ function isUsernameAvailable(UserName) {
   return true;
 }
 
-function throwError(socket, error) {
+function throwErrorToPopup(socket, error) {
   const err = JSON.stringify({
     'message': 'error',
     error,
@@ -105,9 +108,8 @@ function getRoomByUser(user) {
 //socket events
 function disconnect(socket, user) {
   const userIndex = users.findIndex(item => item.uid === user.uid);
-  const uidIndex = usedID.findIndex(item => item === user.uid);
+  idGenerator.removeID(user.uid);
   users.splice(userIndex, 1);
-  usedID.splice(uidIndex, 1);
   rooms.forEach((room, i) => {
     if (room.nullUsers()) {
       delete roomsID[room.getRoomID];
@@ -136,29 +138,28 @@ function disconnectFromRoom(socket, user) {
   rooms.forEach((room, i) => {
     if (room.nullUsers()) {
       delete roomsID[room.getRoomID()];
-      const roomIDIndex = usedID.findIndex(item => item === room.getRoomID());
-      usedID.splice(roomIDIndex, 1);
+      idGenerator.removeID(room.getRoomID());
       rooms.splice(i, 1);
     }
   });
 }
 
-function removeUID(uid) {
+/*function removeUID(uid) {
   const uidIndex = usedID.indexOf(uid);
   if (uidIndex !== -1) {
     usedID.splice(uidIndex, 1);
     return true;
   }
   return false;
-}
+}*/
 
 //socket events handlers
 function conectUserToRoom(socket, parsedMSG) {
   console.log('socket: conectToRoom');
   const data = parsedMSG.data;
   if (!isUsernameAvailable(data.user.name)) {
-    throwError(socket, 'This username (' + data.user.name + ') already exists');
-    removeUID(data.user.uid);
+    throwErrorToPopup(socket, 'This username (' + data.user.name + ') already exists');
+    idGenerator.removeUID(data.user.uid);
     socket.close();
     return;
   }
@@ -177,7 +178,7 @@ function conectUserToRoom(socket, parsedMSG) {
   } else {
     user.setName(data.user.name);
     user.setRoom(data.user.room);
-    room = new Room(user.room, iDGenerator());
+    room = new Room(user.room, idGenerator.getID());
     room.shareURL = data.sharedSiteURL;
     room.addUser(socket, user.name);
     rooms.push(room);
@@ -238,7 +239,7 @@ ws.on('connection', (socket, req) => {
   if (debug) console.log(`Connected ${ip}, ${req.url}`);
 
 
-  const uid = iDGenerator();
+  const uid = idGenerator.getID();
   const message = JSON.stringify({ 'message': 'uid', uid });
   socket.send(message);
 
