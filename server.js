@@ -159,7 +159,7 @@ function conectUserToRoom(socket, parsedMSG) {
   const data = parsedMSG.data;
   if (!isUsernameAvailable(data.user.name)) {
     throwErrorToPopup(socket, 'This username (' + data.user.name + ') already exists');
-    idGenerator.removeUID(data.user.uid);
+    idGenerator.removeID(data.user.uid);
     socket.close();
     return;
   }
